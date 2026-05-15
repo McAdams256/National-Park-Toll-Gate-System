@@ -1,0 +1,313 @@
+
+<h2 class="sr-only">UWA Unified Electronic Toll Gate System — live management dashboard showing revenue, visitor counts, gate status, and transaction activity across Uganda's national parks.</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.db{padding:0 0 2rem}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0 16px;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:20px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-badge{width:36px;height:36px;border-radius:8px;background:#1D9E75;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:500}
+.logo-text{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.logo-sub{font-size:12px;color:var(--color-text-secondary)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:#1D9E75;font-weight:500}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.time-label{font-size:12px;color:var(--color-text-secondary)}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.mc{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mc-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.mc-val{font-size:24px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.mc-sub{font-size:11px;color:var(--color-text-secondary);margin-top:4px}
+.mc-up{color:#1D9E75}
+.mc-down{color:#E24B4A}
+.row2{display:grid;grid-template-columns:1fr 280px;gap:12px;margin-bottom:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.card-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.card-title-right{font-size:11px;color:var(--color-text-secondary);font-weight:400}
+.park-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.park-row:last-child{border-bottom:none}
+.park-name{font-size:12px;color:var(--color-text-primary);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.park-bar-wrap{width:90px;height:5px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden}
+.park-bar{height:100%;border-radius:3px;background:#1D9E75}
+.park-rev{font-size:12px;color:var(--color-text-primary);font-weight:500;min-width:68px;text-align:right}
+.park-visitors{font-size:11px;color:var(--color-text-secondary);min-width:40px;text-align:right}
+.tx-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.tx-row:last-child{border-bottom:none}
+.tx-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.tx-icon.mm{background:#E1F5EE;color:#0F6E56}
+.tx-icon.card{background:#E6F1FB;color:#185FA5}
+.tx-icon.rfid{background:#FAEEDA;color:#854F0B}
+.tx-icon.cash{background:#F1EFE8;color:#5F5E5A}
+.tx-info{flex:1;min-width:0}
+.tx-park{font-size:12px;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-plate{font-size:11px;color:var(--color-text-secondary)}
+.tx-amt{font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap}
+.tx-time{font-size:10px;color:var(--color-text-secondary)}
+.gate-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gate-item{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.gate-name{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gate-status{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500}
+.g-dot{width:6px;height:6px;border-radius:50%}
+.g-online{color:#1D9E75}.g-dot.online{background:#1D9E75}
+.g-offline{color:#E24B4A}.g-dot.offline{background:#E24B4A}
+.g-slow{color:#BA7517}.g-dot.slow{background:#BA7517}
+.gate-tx{font-size:10px;color:var(--color-text-secondary);margin-top:2px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;font-size:11px;color:var(--color-text-secondary)}
+.leg-item{display:flex;align-items:center;gap:4px}
+.leg-sq{width:10px;height:10px;border-radius:2px}
+.section-tabs{display:flex;gap:0;margin-bottom:14px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.tab{font-size:12px;padding:6px 12px 8px;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-0.5px}
+.tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500}
+.alert-bar{background:#FAEEDA;border:0.5px solid #FAC775;border-radius:var(--border-radius-md);padding:10px 14px;font-size:12px;color:#633806;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+</style>
+
+<div class="db">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-badge"><i class="ti ti-leaf" aria-hidden="true"></i></div>
+      <div>
+        <div class="logo-text">UWA Toll Gate System</div>
+        <div class="logo-sub">Uganda Wildlife Authority — National Parks Network</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-badge"><span class="live-dot"></span> Live</div>
+      <div class="time-label" id="clock">—</div>
+      <button onclick="refreshData()" style="font-size:12px;padding:5px 12px;display:flex;align-items:center;gap:5px"><i class="ti ti-refresh" aria-hidden="true"></i> Refresh</button>
+    </div>
+  </div>
+
+  <div class="alert-bar" id="alertBar">
+    <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+    <span><strong>Kidepo Valley — Main Gate:</strong> Connectivity degraded. Fallback to offline mode active. Last sync 4 min ago.</span>
+  </div>
+
+  <div class="metrics">
+    <div class="mc">
+      <div class="mc-label"><i class="ti ti-currency-dollar" aria-hidden="true" style="font-size:14px"></i> Today's revenue</div>
+      <div class="mc-val" id="todayRev">—</div>
+      <div class="mc-sub mc-up" id="revChange">—</div>
+    </div>
+    <div class="mc">
+      <div class="mc-label"><i class="ti ti-users" aria-hidden="true" style="font-size:14px"></i> Visitors today</div>
+      <div class="mc-val" id="visitorCount">—</div>
+      <div class="mc-sub" id="visitorSub">—</div>
+    </div>
+    <div class="mc">
+      <div class="mc-label"><i class="ti ti-barrier-block" aria-hidden="true" style="font-size:14px"></i> Active gates</div>
+      <div class="mc-val" id="activeGates">—</div>
+      <div class="mc-sub mc-down" id="gatesSub">—</div>
+    </div>
+    <div class="mc">
+      <div class="mc-label"><i class="ti ti-clock-bolt" aria-hidden="true" style="font-size:14px"></i> Avg transaction time</div>
+      <div class="mc-val" id="avgTime">—</div>
+      <div class="mc-sub mc-up" id="timeSub">—</div>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div class="card">
+      <div class="card-title">
+        Revenue trend — last 7 days
+        <span class="card-title-right">USD</span>
+      </div>
+      <div class="legend">
+        <span class="leg-item"><span class="leg-sq" style="background:#1D9E75"></span> Total revenue</span>
+        <span class="leg-item"><span class="leg-sq" style="background:#378ADD;border:1px dashed #185FA5"></span> Target</span>
+      </div>
+      <div style="position:relative;width:100%;height:200px">
+        <canvas id="revChart" role="img" aria-label="Line chart of daily revenue over the last 7 days across UWA national parks.">Revenue varied between $18,000 and $34,000 over the past week.</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Payment methods</div>
+      <div class="legend" id="payLegend"></div>
+      <div style="position:relative;width:100%;height:180px">
+        <canvas id="payChart" role="img" aria-label="Donut chart showing breakdown of payment methods: mobile money, card, RFID, and cash.">Mobile money leads at 58%, followed by card at 24%, RFID 12%, cash 6%.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="row3">
+    <div class="card">
+      <div class="card-title">
+        Park performance today
+        <span class="card-title-right">revenue · visitors</span>
+      </div>
+      <div id="parkList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent transactions</div>
+      <div id="txFeed"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Gate status — all parks</div>
+    <div class="gate-grid" id="gateGrid"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const parks = [
+  {name:'Murchison Falls',cat:'A+',gates:4,baseRev:7420,visitors:184},
+  {name:'Queen Elizabeth',cat:'A',gates:5,baseRev:6310,visitors:156},
+  {name:'Bwindi Impenetrable',cat:'A',gates:3,baseRev:11200,visitors:92},
+  {name:'Kidepo Valley',cat:'A',gates:2,baseRev:2180,visitors:54},
+  {name:'Lake Mburo',cat:'B',gates:2,baseRev:1640,visitors:68},
+  {name:'Rwenzori Mtns',cat:'A',gates:2,baseRev:1920,visitors:48},
+  {name:'Mgahinga Gorilla',cat:'A',gates:1,baseRev:3800,visitors:40},
+  {name:'Mt Elgon',cat:'B',gates:2,baseRev:980,visitors:36},
+  {name:'Semuliki',cat:'B',gates:1,baseRev:620,visitors:28},
+];
+
+const gateDetails = [
+  {name:'Murchison — Kichumbanyobo',status:'online',tx:312},
+  {name:'Murchison — Tangi',status:'online',tx:198},
+  {name:'Queen Eliz — Katunguru',status:'online',tx:267},
+  {name:'Queen Eliz — Ishasha',status:'slow',tx:89},
+  {name:'Bwindi — Buhoma',status:'online',tx:148},
+  {name:'Bwindi — Nkuringo',status:'online',tx:112},
+  {name:'Kidepo — Main',status:'offline',tx:0},
+  {name:'Kidepo — Apoka',status:'slow',tx:34},
+  {name:'Lake Mburo — Main',status:'online',tx:97},
+  {name:'Rwenzori — Nyakalengija',status:'online',tx:78},
+  {name:'Mgahinga — Main',status:'online',tx:64},
+  {name:'Mt Elgon — Sasa',status:'online',tx:52},
+];
+
+const txData = [
+  {type:'mm',park:'Murchison Falls',plate:'UG 234C',amt:'$45',time:'just now'},
+  {type:'rfid',park:'Queen Elizabeth',plate:'UG T-2281',amt:'$40',time:'1 min'},
+  {type:'card',park:'Bwindi',plate:'KCA 001K',amt:'$800',time:'2 min'},
+  {type:'mm',park:'Lake Mburo',plate:'UAB 412G',amt:'UGX 20k',time:'3 min'},
+  {type:'card',park:'Murchison Falls',plate:'T 145 AAA',amt:'$45',time:'4 min'},
+  {type:'cash',park:'Semuliki',plate:'UG 009D',amt:'UGX 20k',time:'6 min'},
+  {type:'rfid',park:'Queen Elizabeth',plate:'UG R-0044',amt:'$40',time:'7 min'},
+  {type:'mm',park:'Rwenzori',plate:'UAX 771B',amt:'$40',time:'9 min'},
+];
+
+const payMethods = [
+  {label:'Mobile money',pct:58,color:'#1D9E75'},
+  {label:'Card (Visa/MC)',pct:24,color:'#378ADD'},
+  {label:'RFID',pct:12,color:'#BA7517'},
+  {label:'Cash',pct:6,color:'#888780'},
+];
+
+const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const revData = [21400,19800,23600,26100,31200,34800,28500];
+const target = [24000,24000,24000,24000,24000,24000,24000];
+
+function fmtClock(){
+  const n=new Date();
+  return n.toLocaleDateString('en-UG',{weekday:'short',day:'numeric',month:'short'})+' · '+n.toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'});
+}
+
+function buildMetrics(){
+  const total = parks.reduce((s,p)=>s+p.baseRev,0);
+  const visitors = parks.reduce((s,p)=>s+p.visitors,0);
+  const online = gateDetails.filter(g=>g.status==='online').length;
+  document.getElementById('todayRev').textContent='$'+total.toLocaleString();
+  document.getElementById('revChange').textContent='↑ 12.4% vs yesterday';
+  document.getElementById('visitorCount').textContent=visitors.toLocaleString();
+  document.getElementById('visitorSub').textContent=Math.round(visitors*0.61)+' intl · '+Math.round(visitors*0.39)+' resident';
+  document.getElementById('activeGates').textContent=online+' / '+gateDetails.length;
+  document.getElementById('gatesSub').textContent='1 offline · 2 degraded';
+  document.getElementById('avgTime').textContent='8.3s';
+  document.getElementById('timeSub').textContent='↓ from 3 min manual avg';
+}
+
+function buildParkList(){
+  const max = Math.max(...parks.map(p=>p.baseRev));
+  const el = document.getElementById('parkList');
+  el.innerHTML = parks.map(p=>`
+    <div class="park-row">
+      <span class="park-name">${p.name}</span>
+      <div class="park-bar-wrap"><div class="park-bar" style="width:${Math.round(p.baseRev/max*100)}%"></div></div>
+      <span class="park-rev">$${p.baseRev.toLocaleString()}</span>
+      <span class="park-visitors">${p.visitors} pax</span>
+    </div>`).join('');
+}
+
+function buildTxFeed(){
+  const icons={mm:'ti-device-mobile-dollar',card:'ti-credit-card',rfid:'ti-antenna',cash:'ti-cash'};
+  const el=document.getElementById('txFeed');
+  el.innerHTML=txData.map(t=>`
+    <div class="tx-row">
+      <div class="tx-icon ${t.type}" aria-hidden="true"><i class="ti ${icons[t.type]}"></i></div>
+      <div class="tx-info">
+        <div class="tx-park">${t.park}</div>
+        <div class="tx-plate">${t.plate}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="tx-amt">${t.amt}</div>
+        <div class="tx-time">${t.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+function buildGates(){
+  const el=document.getElementById('gateGrid');
+  el.innerHTML=gateDetails.map(g=>`
+    <div class="gate-item">
+      <div class="gate-name">${g.name}</div>
+      <div class="gate-status g-${g.status}">
+        <span class="g-dot ${g.status}"></span>
+        ${g.status==='online'?'Online':g.status==='slow'?'Degraded':'Offline'}
+      </div>
+      <div class="gate-tx">${g.tx>0?g.tx+' tx today':'No data'}</div>
+    </div>`).join('');
+}
+
+function buildCharts(){
+  const isDark=matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor=isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)';
+  const textColor=isDark?'#a0a09a':'#5F5E5A';
+
+  new Chart(document.getElementById('revChart'),{
+    type:'line',
+    data:{
+      labels:days,
+      datasets:[
+        {label:'Revenue',data:revData,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.08)',tension:0.4,fill:true,borderWidth:2,pointRadius:4,pointBackgroundColor:'#1D9E75',pointBorderColor:'#fff',pointBorderWidth:2},
+        {label:'Target',data:target,borderColor:'#378ADD',borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'$'+c.raw.toLocaleString()}}},
+      scales:{
+        x:{grid:{color:gridColor},ticks:{color:textColor,font:{size:11}}},
+        y:{grid:{color:gridColor},ticks:{color:textColor,font:{size:11},callback:v=>'$'+Math.round(v/1000)+'k'},beginAtZero:false,min:15000}
+      }
+    }
+  });
+
+  const legend=document.getElementById('payLegend');
+  legend.innerHTML=payMethods.map(m=>`<span class="leg-item"><span class="leg-sq" style="background:${m.color}"></span>${m.label} ${m.pct}%</span>`).join('');
+
+  new Chart(document.getElementById('payChart'),{
+    type:'doughnut',
+    data:{
+      labels:payMethods.map(m=>m.label),
+      datasets:[{data:payMethods.map(m=>m.pct),backgroundColor:payMethods.map(m=>m.color),borderWidth:2,borderColor:isDark?'#1a1a18':'#fff',hoverOffset:4}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+c.raw+'%'}}}
+    }
+  });
+}
+
+function refreshData(){
+  document.getElementById('clock').textContent=fmtClock();
+}
+
+setInterval(()=>{document.getElementById('clock').textContent=fmtClock();},30000);
+document.getElementById('clock').textContent=fmtClock();
+buildMetrics();buildParkList();buildTxFeed();buildGates();buildCharts();
+</script>

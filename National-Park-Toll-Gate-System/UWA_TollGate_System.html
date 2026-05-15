@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>UWA Unified Electronic Toll Gate System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#085041;--primary-mid:#0F6E56;--primary-light:#1D9E75;
+  --accent:#22c55e;--accent-bg:#E1F5EE;
+  --bg:#f0f4f2;--card:#ffffff;--border:#dde5e1;
+  --text:#1a1a18;--muted:#64748b;--faint:#94a3b8;
+  --danger:#ef4444;--danger-bg:#fef2f2;
+  --warn:#f59e0b;--warn-bg:#fffbeb;
+  --info:#3b82f6;--info-bg:#eff6ff;
+  --sidebar-w:210px;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 4px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.05);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+button{cursor:pointer}
+
+/* ── SHELL ── */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--primary);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:100}
+.main{margin-left:var(--sidebar-w);flex:1;padding:24px;overflow-y:auto;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sb-header{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-logo{display:flex;align-items:center;gap:8px}
+.sb-logo-icon{width:34px;height:34px;border-radius:8px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.sb-logo-text{font-size:12px;font-weight:700;color:#E1F5EE;letter-spacing:.02em}
+.sb-logo-sub{font-size:10px;color:#9FE1CB;margin-top:1px}
+.live-pill{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10px;font-weight:700;color:#5DCAA5}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#5DCAA5;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-nav{flex:1;padding:8px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:9px;width:100%;padding:9px 14px;background:none;border:none;border-left:3px solid transparent;color:#9FE1CB;font-size:12px;font-weight:600;text-align:left;transition:all .15s}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#E1F5EE}
+.nav-item.active{background:rgba(255,255,255,.12);border-left-color:#5DCAA5;color:#E1F5EE}
+.nav-icon{font-size:15px;width:18px;flex-shrink:0;text-align:center}
+.nav-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px}
+.sb-section{padding:4px 14px 2px;font-size:9px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;margin-top:8px}
+.sb-footer{padding:12px 14px;border-top:1px solid rgba(255,255,255,.1)}
+.user-row{display:flex;align-items:center;gap:8px}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.user-name{font-size:11px;font-weight:700;color:#E1F5EE}
+.user-role{font-size:10px;color:#9FE1CB;text-transform:capitalize}
+.logout-btn{margin-left:auto;background:none;border:1px solid rgba(255,255,255,.2);color:#9FE1CB;border-radius:5px;padding:3px 8px;font-size:11px}
+.logout-btn:hover{background:rgba(255,255,255,.1)}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.01em}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.topbar-right{display:flex;gap:8px;align-items:center}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.gap-14{gap:14px}
+.flex-col{display:flex;flex-direction:column;gap:14px}
+
+/* ── STAT BOXES ── */
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat-box.accent{background:var(--primary);border-color:var(--primary)}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.stat-box.accent .stat-label{color:#9FE1CB}
+.stat-val{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.02em;line-height:1}
+.stat-box.accent .stat-val{color:#E1F5EE}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.stat-sub.up{color:#16a34a}
+.stat-sub.down{color:var(--danger)}
+.stat-box.accent .stat-sub{color:#5DCAA5}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;transition:all .15s}
+.btn-primary{background:var(--primary);color:#E1F5EE}.btn-primary:hover{background:var(--primary-mid)}
+.btn-accent{background:var(--primary-light);color:#fff}.btn-accent:hover{background:var(--primary-mid)}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}
+.btn-danger{background:var(--danger-bg);color:var(--danger);border:1px solid #fecaca}.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-block{width:100%;justify-content:center}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-group{display:flex;gap:6px}
+
+/* ── FORMS ── */
+.form-row{display:grid;gap:12px;margin-bottom:12px}
+.form-row.cols-2{grid-template-columns:1fr 1fr}
+.form-row.cols-3{grid-template-columns:1fr 1fr 1fr}
+.form-row.cols-4{grid-template-columns:repeat(4,1fr)}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;font-weight:600;color:var(--muted)}
+.form-control{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);color:var(--text);width:100%;outline:none;transition:border-color .15s}
+.form-control:focus{border-color:var(--primary-light)}
+.form-control.error{border-color:var(--danger)}
+.form-note{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--bg)}
+th{padding:9px 12px;text-align:left;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)}
+td{padding:9px 12px;border-bottom:1px solid #f0f4f2;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8faf9}
+.td-bold{font-weight:700;color:var(--text)}
+.td-green{color:#16a34a;font-weight:700}
+.td-red{color:var(--danger);font-weight:700}
+.td-muted{color:var(--muted)}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.02em}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-red{background:#fef2f2;color:#991b1b}
+.badge-amber{background:#fffbeb;color:#92400e}
+.badge-blue{background:#eff6ff;color:#1e40af}
+.badge-gray{background:#f1f5f9;color:#475569}
+.badge-primary{background:var(--accent-bg);color:var(--primary)}
+
+/* ── PAY METHOD ICONS ── */
+.pm-icon{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600}
+.pm-icon.mm{color:#16a34a}.pm-icon.card{color:#2563eb}.pm-icon.rfid{color:#d97706}.pm-icon.cash{color:#64748b}
+
+/* ── LOGIN ── */
+.login-wrap{display:flex;min-height:100vh}
+.login-left{flex:1;background:var(--primary);padding:40px 48px;display:flex;flex-direction:column;justify-content:center}
+.login-right{width:420px;background:#fff;padding:40px 36px;display:flex;flex-direction:column;justify-content:center;box-shadow:-4px 0 24px rgba(0,0,0,.08)}
+.brand-title{font-size:20px;font-weight:800;color:#E1F5EE;margin-top:12px;line-height:1.3}
+.brand-sub{font-size:13px;color:#9FE1CB;margin-top:4px}
+.login-tagline{font-size:16px;color:#9FE1CB;margin:28px 0 20px;line-height:1.5;font-style:italic}
+.login-feature{display:flex;align-items:center;gap:8px;color:#9FE1CB;font-size:13px;margin-bottom:8px}
+.login-feature::before{content:'✓';color:#5DCAA5;font-weight:800}
+.demo-accounts{margin-top:28px;border-top:1px solid rgba(255,255,255,.15);padding-top:20px}
+.demo-title{font-size:11px;font-weight:800;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.demo-btn{display:block;width:100%;text-align:left;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#9FE1CB;border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;margin-bottom:6px;transition:all .15s}
+.demo-btn:hover{background:rgba(255,255,255,.15);color:#E1F5EE}
+.login-title{font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px}
+.login-subtitle{font-size:13px;color:var(--muted);margin-bottom:24px}
+.login-divider{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;position:relative}
+.login-divider::before,.login-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.login-divider::before{left:0}.login-divider::after{right:0}
+.error-msg{color:var(--danger);font-size:12px;margin-top:8px;padding:8px 10px;background:var(--danger-bg);border-radius:var(--radius-sm)}
+.success-msg{color:#166534;font-size:12px;margin-top:8px;padding:8px 10px;background:#dcfce7;border-radius:var(--radius-sm)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:var(--radius);background:var(--primary);color:#E1F5EE;font-size:13px;font-weight:600;z-index:9999;transform:translateY(20px);opacity:0;transition:all .25s;pointer-events:none;box-shadow:var(--shadow)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.warn{background:#92400e}
+.toast.err{background:#991b1b}
+
+/* ── GATE STATUS DOTS ── */
+.g-status{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.g-dot{width:7px;height:7px;border-radius:50%}
+.g-online{color:#16a34a}.g-dot.online{background:#22c55e}
+.g-degraded{color:#d97706}.g-dot.degraded{background:#f59e0b}
+.g-offline{color:#b91c1c}.g-dot.offline{background:#ef4444}
+
+/* ── POS SPECIFIC ── */
+.pos-wrap{display:grid;grid-template-columns:1fr 300px;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.pos-left{padding:18px;border-right:1px solid var(--border);background:#fff}
+.pos-right{background:var(--bg);padding:16px;display:flex;flex-direction:column;gap:12px}
+.pos-header{background:var(--primary);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.pos-header-left{font-size:13px;font-weight:700;color:#E1F5EE}
+.pos-header-sub{font-size:11px;color:#9FE1CB;margin-top:2px}
+.qty-ctrl{display:flex;align-items:center;gap:6px}
+.qty-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text);line-height:1}
+.qty-val{font-size:13px;font-weight:700;min-width:18px;text-align:center}
+.visitor-table{border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px}
+.vt-head{display:grid;grid-template-columns:1fr 110px 90px 100px;background:var(--bg);padding:7px 12px;font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.vt-row{display:grid;grid-template-columns:1fr 110px 90px 100px;padding:9px 12px;border-bottom:1px solid #f0f4f2;align-items:center;transition:background .1s}
+.vt-row:last-child{border-bottom:none}
+.vt-row.has-qty{background:#f0faf6}
+.vt-cat{font-size:12px;font-weight:600;color:var(--text)}
+.vt-rate{font-size:11px;color:var(--muted)}
+.vt-sub{font-size:12px;font-weight:700;text-align:right}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pay-btn{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;background:#fff;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .15s}
+.pay-btn.sel{border:2px solid var(--primary-light);background:var(--accent-bg)}
+.pay-btn-icon{font-size:20px}
+.pay-btn-label{font-size:10px;font-weight:700;color:var(--muted)}
+.pay-btn.sel .pay-btn-label{color:var(--primary)}
+.total-box{background:var(--primary);border-radius:var(--radius-sm);padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.total-label{font-size:13px;font-weight:700;color:#9FE1CB}
+.total-amt{font-size:22px;font-weight:800;color:#E1F5EE;letter-spacing:-.02em}
+
+/* ── RECEIPT OVERLAY ── */
+.receipt-overlay{position:fixed;inset:0;background:rgba(8,80,65,.9);display:flex;align-items:center;justify-content:center;z-index:200}
+.receipt-card{background:#fff;border-radius:var(--radius);padding:22px;width:280px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.receipt-logo{font-size:10px;font-weight:800;color:var(--primary);letter-spacing:.1em;text-transform:uppercase}
+.receipt-title{font-size:16px;font-weight:800;margin:4px 0 2px}
+.receipt-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+.receipt-divider{border:none;border-top:1px dashed var(--border);margin:10px 0}
+.receipt-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.receipt-rl{color:var(--muted)}.receipt-rv{font-weight:700}
+.receipt-total{display:flex;justify-content:space-between;font-size:14px;font-weight:800;border-top:1px solid var(--border);padding:8px 0 4px;margin-top:6px}
+.receipt-ref{font-size:10px;color:var(--muted);margin:6px 0 12px}
+.barcode{font-family:monospace;font-size:9px;letter-spacing:3px;color:var(--muted);background:var(--bg);border-radius:4px;padding:5px 8px;margin-bottom:12px}
+.receipt-ok{color:#16a34a;font-weight:800;font-size:12px;margin-bottom:12px}
+
+/* ── BOOKING STEPS ── */
+.step-bar{display:flex;align-items:center;gap:6px;margin-bottom:20px}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-num.done{background:var(--primary);color:#fff}
+.step-num.current{background:var(--primary-light);color:#fff}
+.step-num.pending{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.step-line{flex:1;height:2px;background:var(--border)}
+.step-line.done{background:var(--primary)}
+.park-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.park-pick-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;cursor:pointer;transition:all .15s;background:#fff}
+.park-pick-card:hover{border-color:var(--primary-light)}
+.park-pick-card.sel{border:2px solid var(--primary-light);background:var(--accent-bg)}
+.park-pick-img{font-size:28px;margin-bottom:6px}
+.park-pick-name{font-size:12px;font-weight:700}
+.park-pick-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.park-pick-fee{font-size:11px;font-weight:700;color:var(--primary);margin-top:4px}
+
+/* ── RFID CARD ── */
+.rfid-card{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);border-radius:12px;padding:20px 24px;color:#fff}
+.rfid-label{font-size:11px;color:#9FE1CB;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.rfid-tag{font-size:24px;font-weight:800;letter-spacing:.06em;font-family:monospace}
+.rfid-balance{font-size:28px;font-weight:800;margin:8px 0 2px;letter-spacing:-.02em}
+.rfid-meta{display:flex;gap:24px;margin-top:12px}
+.rfid-stat-label{font-size:10px;color:#9FE1CB}
+.rfid-stat-val{font-size:14px;font-weight:700}
+
+/* ── ANOMALY ITEMS ── */
+.anomaly-item{border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:8px}
+.anomaly-item.high{background:#fef2f2;border:1px solid #fecaca}
+.anomaly-item.medium{background:#fffbeb;border:1px solid #fde68a}
+.anomaly-item.low{background:#f0fdf4;border:1px solid #bbf7d0}
+.anomaly-item.resolved{background:#f1f5f9;border:1px solid var(--border);opacity:.7}
+.anomaly-title{font-size:13px;font-weight:700}
+.anomaly-item.high .anomaly-title{color:#991b1b}
+.anomaly-item.medium .anomaly-title{color:#92400e}
+.anomaly-item.low .anomaly-title{color:#166534}
+.anomaly-detail{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* ── MISC ── */
+.section-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state-icon{font-size:40px;margin-bottom:12px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.search-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center}
+.search-input{flex:1;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#fff;outline:none;font-size:13px}
+.search-input:focus{border-color:var(--primary-light)}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.filter-chip{padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:11px;font-weight:600;color:var(--muted)}
+.filter-chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.topbar-badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
+.progress-bar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+.chart-wrap{position:relative;width:100%}
+@media(max-width:900px){.grid-4{grid-template-columns:1fr 1fr}.pos-wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="receipt-overlay" style="display:none" class="receipt-overlay"></div>
+<script>
+/* ════════════════════════════════════════════
+   DATABASE LAYER
+════════════════════════════════════════════ */
+const DB = {
+  get:(t)=>JSON.parse(localStorage.getItem('uwa_'+t)||'[]'),
+  set:(t,d)=>localStorage.setItem('uwa_'+t,JSON.stringify(d)),
+  all:(t)=>DB.get(t),
+  find:(t,id)=>DB.get(t).find(r=>r.id===id)||null,
+  where:(t,fn)=>DB.get(t).filter(fn),
+  insert:(t,r)=>{
+    const d=DB.get(t);
+    if(!r.id) r.id='R'+Date.now().toString(36).slice(-7).toUpperCase();
+    r.createdAt=new Date().toISOString();
+    d.push(r); DB.set(t,d); return r;
+  },
+  update:(t,id,u)=>{
+    const d=DB.get(t), i=d.findIndex(r=>r.id===id);
+    if(i>=0){d[i]={...d[i],...u,updatedAt:new Date().toISOString()};DB.set(t,d);return d[i];}
+    return null;
+  },
+  delete:(t,id)=>DB.set(t,DB.get(t).filter(r=>r.id!==id)),
+  count:(t,fn)=>fn?DB.get(t).filter(fn).length:DB.get(t).length,
+  sum:(t,f,fn)=>DB.get(t).filter(fn||(()=>true)).reduce((s,r)=>s+(parseFloat(r[f])||0),0),
+  clearAll:()=>['users','parks','gates','transactions','bookings','vehicles','anomalies','rfid_topups']
+    .forEach(t=>DB.set(t,[])),
+};
+
+/* ════════════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════════════ */
+const FEES={
+  Ap:{foreigner:166500,resident:111000,ea_adult:20000,ea_child:10000},
+  A: {foreigner:148000,resident:111000,ea_adult:20000,ea_child:10000},
+  B: {foreigner:74000, resident:55500, ea_adult:10000,ea_child:5000},
+};
+const VEH_FEES={
+  saloon: {local:20000,ea:55000,foreign:148000},
+  minibus:{local:30000,ea:74000, foreign:185000},
+  bus:    {local:40000,ea:111000,foreign:222000},
+};
+const CAT_KEYS=['foreigner','resident','ea_adult','ea_child'];
+const CAT_LABELS=['Foreign non-resident','Foreign resident','EA citizen (adult)','EA citizen (child)'];
+const PAY_LABELS={mobile_money:'Mobile Money',card:'Card',rfid:'RFID Tag',cash:'Cash'};
+const PAY_ICONS={mobile_money:'📱',card:'💳',rfid:'📡',cash:'💵'};
+
+const fmt=n=>'UGX '+Math.round(n||0).toLocaleString();
+const fmtM=n=>'UGX '+(n/1e6).toFixed(1)+'M';
+const fmtDate=d=>d?new Date(d).toLocaleDateString('en-UG',{day:'numeric',month:'short',year:'numeric'}):'-';
+const fmtTime=d=>d?new Date(d).toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'}):'-';
+const genRef=()=>'UWA-'+Date.now().toString(36).toUpperCase().slice(-8);
+const parkName=id=>DB.find('parks',id)?.name||id;
+const gateName=id=>DB.find('gates',id)?.name||id;
+const esc=s=>String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ════════════════════════════════════════════
+   SEED DATABASE
+════════════════════════════════════════════ */
+function seedDB(){
+  if(DB.count('users')>0) return;
+
+  // Users
+  DB.insert('users',{id:'admin',name:'Okwii Ezra',email:'admin@uwa.go.ug',password:'admin',role:'admin',phone:'+256 700 111 000'});
+  DB.insert('users',{id:'operator',name:'Opio James',email:'operator@uwa.go.ug',password:'operator',role:'operator',parkId:'park_murchison',gateId:'gate_kichum',phone:'+256 700 222 000'});
+  DB.insert('users',{id:'visitor',name:'Nakato Sarah',email:'visitor@uwa.go.ug',password:'visitor',role:'visitor',nationality:'Ugandan',rfidTag:'UG-R-0044',rfidBalance:592000,phone:'+256 772 333 000'});
+
+  // Parks
+  [
+    {id:'park_murchison',name:'Murchison Falls',cat:'Ap',region:'Northern',  icon:'🦛'},
+    {id:'park_queen',    name:'Queen Elizabeth',cat:'A', region:'Western',   icon:'🐘'},
+    {id:'park_bwindi',   name:'Bwindi Impenetrable',cat:'A',region:'Southwest',icon:'🦍'},
+    {id:'park_kidepo',   name:'Kidepo Valley',  cat:'A', region:'Northeast', icon:'🦁'},
+    {id:'park_mburo',    name:'Lake Mburo',      cat:'B', region:'Western',   icon:'🦓'},
+    {id:'park_rwenzori', name:'Rwenzori Mountains',cat:'A',region:'Western',  icon:'🏔️'},
+    {id:'park_mgahinga', name:'Mgahinga Gorilla',cat:'A',region:'Southwest', icon:'🌋'},
+    {id:'park_elgon',    name:'Mt Elgon',        cat:'B', region:'Eastern',   icon:'🌿'},
+    {id:'park_semuliki', name:'Semuliki',         cat:'B', region:'Western',   icon:'🦜'},
+  ].forEach(p=>DB.insert('parks',p));
+
+  // Gates
+  [
+    {id:'gate_kichum',  parkId:'park_murchison',name:'Kichumbanyobo',status:'online',  uptime:99.8},
+    {id:'gate_tangi',   parkId:'park_murchison',name:'Tangi',         status:'online',  uptime:99.6},
+    {id:'gate_katung',  parkId:'park_queen',     name:'Katunguru',    status:'online',  uptime:99.9},
+    {id:'gate_ishasha', parkId:'park_queen',     name:'Ishasha',      status:'degraded',uptime:87.3},
+    {id:'gate_buhoma',  parkId:'park_bwindi',    name:'Buhoma',       status:'online',  uptime:99.7},
+    {id:'gate_nkuringo',parkId:'park_bwindi',    name:'Nkuringo',     status:'online',  uptime:99.4},
+    {id:'gate_apoka',   parkId:'park_kidepo',    name:'Apoka',        status:'degraded',uptime:71.2},
+    {id:'gate_kidepo_m',parkId:'park_kidepo',    name:'Main Gate',    status:'offline', uptime:54.1},
+    {id:'gate_mburo_m', parkId:'park_mburo',     name:'Main Gate',    status:'online',  uptime:99.5},
+    {id:'gate_rwenz',   parkId:'park_rwenzori',  name:'Nyakalengija', status:'online',  uptime:98.8},
+    {id:'gate_mgah',    parkId:'park_mgahinga',  name:'Main Gate',    status:'online',  uptime:99.2},
+    {id:'gate_elgon',   parkId:'park_elgon',     name:'Sasa',         status:'online',  uptime:98.6},
+  ].forEach(g=>DB.insert('gates',g));
+
+  // Vehicles
+  DB.insert('vehicles',{id:'veh1',userId:'visitor',plate:'UAB 412G',type:'saloon', label:'Saloon/SUV',reg:'local'});
+  DB.insert('vehicles',{id:'veh2',userId:'visitor',plate:'UAX 771B',type:'minibus',label:'Minibus',   reg:'local'});
+
+  // Historical transactions (last 60 days)
+  const parks=['park_murchison','park_queen','park_bwindi','park_mburo','park_mgahinga'];
+  const gates=['gate_kichum','gate_katung','gate_buhoma','gate_mburo_m','gate_mgah'];
+  const methods=['mobile_money','mobile_money','mobile_money','card','card','rfid','cash'];
+  const plates=['UG 234C','KCA 001K','T 145AAA','UAB 412G','UAX 771B','UG 009D','KBZ 441T','TZA 120G'];
+  const visAmts=[[1,166500],[2,111000],[1,20000],[2,20000],[3,166500],[1,148000],[2,74000]];
+  for(let i=0;i<120;i++){
+    const d=new Date(); d.setDate(d.getDate()-Math.floor(Math.random()*60));
+    const pi=Math.floor(Math.random()*parks.length);
+    const va=visAmts[Math.floor(Math.random()*visAmts.length)];
+    const vf=20000;
+    DB.insert('transactions',{
+      parkId:parks[pi],gateId:gates[pi],
+      plate:plates[Math.floor(Math.random()*plates.length)],
+      visitorCount:va[0],vehicleFee:vf,visitorFee:va[1]*va[0],
+      total:vf+va[1]*va[0],
+      payMethod:methods[Math.floor(Math.random()*methods.length)],
+      date:d.toISOString().split('T')[0],timestamp:d.toISOString(),
+      status:'completed',operatorId:'operator',
+    });
+  }
+
+  // Historical bookings
+  [
+    {parkId:'park_queen',   plate:'UAB 412G',date:'2026-05-03',visitorCount:2,total:168000,payMethod:'rfid',          ref:'UWA-A8F2C1'},
+    {parkId:'park_mburo',   plate:'UAB 412G',date:'2026-04-19',visitorCount:2,total:40000, payMethod:'mobile_money',  ref:'UWA-B3D9E0'},
+    {parkId:'park_murchison',plate:'UAB 412G',date:'2026-04-02',visitorCount:3,total:196500,payMethod:'card',         ref:'UWA-C1A7F4'},
+    {parkId:'park_bwindi',  plate:'UAB 412G',date:'2026-03-15',visitorCount:1,total:20000, payMethod:'mobile_money',  ref:'UWA-D5B2C3'},
+  ].forEach(b=>DB.insert('bookings',{...b,visitorId:'visitor',status:'completed'}));
+
+  // Anomalies
+  [
+    {parkId:'park_kidepo',gateId:'gate_kidepo_m',type:'Sync gap',       detail:'14-min offline window. 3 cash transactions unverified.',severity:'high',  status:'open'},
+    {parkId:'park_queen', gateId:'gate_ishasha',  type:'Revenue variance',detail:'Gate rev 22% below daily average. Manual recount requested.',severity:'medium',status:'open'},
+    {parkId:'park_elgon', gateId:'gate_elgon',    type:'Capture shortfall',detail:'98.1% capture vs 99% SLA. 6 transactions flagged.',severity:'low',status:'resolved'},
+    {parkId:'park_semuliki',gateId:null,           type:'Cash > 15%',    detail:'Cash share rose to 18%. Possible POS downtime.',severity:'medium',status:'resolved'},
+  ].forEach(a=>DB.insert('anomalies',{...a,date:new Date().toISOString().split('T')[0]}));
+}
+
+/* ════════════════════════════════════════════
+   AUTH
+════════════════════════════════════════════ */
+const Auth={
+  user:null,
+  login(email,pass){
+    const u=DB.where('users',u=>(u.email===email&&u.password===pass)||(u.id===pass&&u.id===email.split('@')[0]))[0]
+           ||DB.where('users',u=>u.id===pass)[0];
+    if(u){this.user=u;return true;}return false;
+  },
+  logout(){this.user=null;},
+  isAdmin(){return this.user?.role==='admin';},
+  isOperator(){return this.user?.role==='operator';},
+  isVisitor(){return this.user?.role==='visitor';},
+};
+
+/* ════════════════════════════════════════════
+   ROUTER & SHELL
+════════════════════════════════════════════ */
+let V='dashboard'; // current view
+let chartInstances={};
+
+function destroyCharts(){Object.values(chartInstances).forEach(c=>{try{c.destroy()}catch(e){}});chartInstances={};}
+function navigate(v){V=v;render();}
+function logout(){Auth.logout();V='dashboard';render();}
+
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  if(!el)return;
+  el.textContent=msg;el.className='toast '+(type||'')+' show';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+function render(){
+  destroyCharts();
+  const app=document.getElementById('app');
+  if(!Auth.user){app.innerHTML=buildLogin();bindLogin();return;}
+  app.innerHTML=buildShell();
+  renderView();
+  document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',()=>navigate(el.dataset.view)));
+  document.querySelector('.logout-btn')?.addEventListener('click',logout);
+}
+
+function buildShell(){
+  const u=Auth.user;
+  const nav=getNav();
+  const init=u.name.split(' ').slice(0,2).map(n=>n[0]).join('');
+  return `
+  <div class="shell">
+    <div class="sidebar">
+      <div class="sb-header">
+        <div class="sb-logo">
+          <div class="sb-logo-icon">🌿</div>
+          <div><div class="sb-logo-text">UWA TollGate</div><div class="sb-logo-sub">Unified Electronic System</div></div>
+        </div>
+        <div class="live-pill"><span class="live-dot"></span> LIVE · ${new Date().toLocaleDateString('en-UG',{day:'numeric',month:'short'})}</div>
+      </div>
+      <nav class="sb-nav">
+        ${nav.map(s=>s.section?`<div class="sb-section">${s.section}</div>`:
+        `<button class="nav-item ${V===s.id?'active':''}" data-view="${s.id}">
+          <span class="nav-icon">${s.icon}</span><span>${s.label}</span>
+          ${s.badge?`<span class="nav-badge">${s.badge}</span>`:''}
+         </button>`).join('')}
+      </nav>
+      <div class="sb-footer">
+        <div class="user-row">
+          <div class="user-avatar">${init}</div>
+          <div><div class="user-name">${u.name.split(' ')[0]}</div><div class="user-role">${u.role}</div></div>
+          <button class="logout-btn" title="Sign out">↪</button>
+        </div>
+      </div>
+    </div>
+    <div class="main" id="main-content"></div>
+  </div>
+  <div id="toast" class="toast"></div>`;
+}
+
+function getNav(){
+  const open=DB.count('anomalies',a=>a.status==='open');
+  if(Auth.isAdmin()) return [
+    {id:'dashboard',icon:'◈',label:'Dashboard'},
+    {id:'revenue',  icon:'↗',label:'Revenue'},
+    {section:'Management'},
+    {id:'parks',    icon:'⬡',label:'Parks & Gates'},
+    {id:'transactions',icon:'≡',label:'Transactions'},
+    {id:'visitors_mgmt',icon:'👥',label:'Visitors'},
+    {id:'anomalies',icon:'⚠',label:'Anomalies',badge:open||null},
+    {section:'System'},
+    {id:'reports',  icon:'↓',label:'Reports & Export'},
+    {id:'gate_pos_admin',icon:'⊞',label:'Gate POS'},
+    {id:'settings', icon:'⚙',label:'Settings'},
+  ];
+  if(Auth.isOperator()) return [
+    {id:'gate_pos', icon:'⊞',label:'Gate POS'},
+    {id:'my_transactions',icon:'≡',label:'My Transactions'},
+    {id:'gate_status',icon:'◎',label:'Gate Status'},
+  ];
+  return [
+    {id:'visitor_home',icon:'🏠',label:'Dashboard'},
+    {id:'book_entry', icon:'🎫',label:'Book Entry'},
+    {id:'my_bookings',icon:'📋',label:'My Bookings'},
+    {id:'rfid_account',icon:'📡',label:'RFID Account'},
+    {id:'my_vehicles',icon:'🚗',label:'Vehicles'},
+    {id:'profile',    icon:'👤',label:'Profile'},
+  ];
+}
+
+function renderView(){
+  const mc=document.getElementById('main-content');
+  if(!mc)return;
+  const views={
+    dashboard:buildDashboard,revenue:buildRevenue,parks:buildParks,
+    transactions:buildTransactions,visitors_mgmt:buildVisitorsMgmt,
+    anomalies:buildAnomalies,reports:buildReports,
+    settings:buildSettings,gate_pos_admin:()=>buildGatePOS(true),
+    gate_pos:()=>buildGatePOS(false),
+    my_transactions:buildMyTransactions,gate_status:buildGateStatus,
+    visitor_home:buildVisitorHome,book_entry:buildBookEntry,
+    my_bookings:buildMyBookings,rfid_account:buildRFIDAccount,
+    my_vehicles:buildMyVehicles,profile:buildProfile,
+  };
+  mc.innerHTML=(views[V]||buildDashboard)();
+  bindView();
+}
+
+/* ════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════ */
+function buildLogin(){
+  return `
+  <div class="login-wrap">
+    <div class="login-left">
+      <div class="sb-logo" style="margin-bottom:8px">
+        <div class="sb-logo-icon" style="width:48px;height:48px;font-size:24px">🌿</div>
+        <div><div class="brand-title">UWA Unified Electronic Toll Gate System</div>
+        <div class="brand-sub">Uganda Wildlife Authority — National Parks Network</div></div>
+      </div>
+      <div class="login-tagline">"Protecting Uganda's wildlife through smart, transparent revenue management."</div>
+      <div class="login-feature">41 gates across 9 national parks</div>
+      <div class="login-feature">Mobile money, card &amp; RFID — all in UGX</div>
+      <div class="login-feature">Real-time revenue transparency &amp; anomaly alerts</div>
+      <div class="login-feature">&lt;10 second transaction processing target</div>
+ <!--     <div class="demo-accounts">
+        <div class="demo-title">Quick demo access</div>
+        <button class="demo-btn" onclick="quickLogin('admin')">🔐 Admin · admin@uwa.go.ug / admin</button>
+        <button class="demo-btn" onclick="quickLogin('operator')">⊞ Gate Operator · operator@uwa.go.ug / operator</button>
+        <button class="demo-btn" onclick="quickLogin('visitor')">👤 Visitor · visitor@uwa.go.ug / visitor</button>
+      </div>
+  --!>
+    </div>
+    <div class="login-right">
+      <div class="login-title">Sign in</div>
+      <div class="login-subtitle">Enter your credentials or use a demo account</div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label>Email address</label>
+        <input class="form-control" id="l-email" type="email" placeholder="you@uwa.go.ug"/>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Password</label>
+        <input class="form-control" id="l-pass" type="password" placeholder="Password"/>
+      </div>
+      <button class="btn btn-primary btn-block" id="login-btn">Sign in →</button>
+      <div id="login-err" class="error-msg" style="display:none"></div>
+      <div class="login-divider">new visitor? register below</div>
+      <div class="form-row cols-2">
+        <div class="form-group"><label>Full name</label><input class="form-control" id="r-name" placeholder="Your name"/></div>
+        <div class="form-group"><label>Phone</label><input class="form-control" id="r-phone" placeholder="+256 7XX XXX XXX"/></div>
+      </div>
+      <div class="form-row cols-2" style="margin-bottom:10px">
+        <div class="form-group"><label>Email</label><input class="form-control" id="r-email" type="email" placeholder="you@email.com"/></div>
+        <div class="form-group"><label>Nationality</label>
+          <select class="form-control" id="r-nat">
+            <option>Ugandan</option><option>Kenyan</option><option>Tanzanian</option>
+            <option>Rwandan</option><option>Other (EA)</option><option>Foreign</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>Password</label><input class="form-control" id="r-pass" type="password" placeholder="Create password"/>
+      </div>
+      <button class="btn btn-outline btn-block" id="reg-btn">Create visitor account</button>
+      <div id="reg-msg" style="display:none"></div>
+    </div>
+  </div>`;
+}
+
+function quickLogin(role){
+  Auth.login(role+'@uwa.go.ug',role);
+  V=role==='admin'?'dashboard':role==='operator'?'gate_pos':'visitor_home';
+  render();
+}
+
+function bindLogin(){
+  document.getElementById('login-btn').onclick=()=>{
+    const e=document.getElementById('l-email').value;
+    const p=document.getElementById('l-pass').value;
+    if(Auth.login(e,p)){
+      V=Auth.isAdmin()?'dashboard':Auth.isOperator()?'gate_pos':'visitor_home';
+      render();
+    } else {
+      const er=document.getElementById('login-err');
+      er.style.display='';er.textContent='Invalid credentials. Use admin / operator / visitor as email prefix and password.';
+    }
+  };
+  document.getElementById('reg-btn').onclick=()=>{
+    const name=document.getElementById('r-name').value.trim();
+    const email=document.getElementById('r-email').value.trim();
+    const phone=document.getElementById('r-phone').value.trim();
+    const nat=document.getElementById('r-nat').value;
+    const pass=document.getElementById('r-pass').value;
+    const msg=document.getElementById('reg-msg');
+    if(!name||!email||!pass){msg.className='error-msg';msg.style.display='';msg.textContent='Please fill all fields.';return;}
+    if(DB.where('users',u=>u.email===email).length>0){msg.className='error-msg';msg.style.display='';msg.textContent='Email already registered.';return;}
+    const u=DB.insert('users',{name,email,phone,password:pass,role:'visitor',nationality:nat,rfidBalance:0,rfidTag:null});
+    Auth.user=u; V='visitor_home'; render();
+  };
+  document.getElementById('l-pass').onkeydown=e=>{if(e.key==='Enter')document.getElementById('login-btn').click();};
+}
+
+/* ════════════════════════════════════════════
+   DASHBOARD (ADMIN)
+════════════════════════════════════════════ */
+function buildDashboard(){
+  const txAll=DB.all('transactions');
+  const today=new Date().toISOString().split('T')[0];
+  const todayTx=txAll.filter(t=>t.date===today);
+  const totalRev=DB.sum('transactions','total');
+  const todayRev=todayTx.reduce((s,t)=>s+(t.total||0),0);
+  const totalVis=DB.sum('transactions','visitorCount');
+  const openAlerts=DB.count('anomalies',a=>a.status==='open');
+  const parks=DB.all('parks');
+
+  // last 7 days data
+  const days7=[];
+  for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days7.push(d.toISOString().split('T')[0]);}
+  const dayLabels=days7.map(d=>new Date(d).toLocaleDateString('en-UG',{weekday:'short'}));
+  const dayRevs=days7.map(d=>DB.sum('transactions','total',t=>t.date===d));
+
+  // payment mix
+  const methods=['mobile_money','card','rfid','cash'];
+  const pmCounts=methods.map(m=>txAll.filter(t=>t.payMethod===m).length);
+  const pmColors=['#22c55e','#3b82f6','#f59e0b','#94a3b8'];
+
+  // park totals
+  const parkRevs=parks.map(p=>({name:p.name.split(' ')[0],rev:DB.sum('transactions','total',t=>t.parkId===p.id)}));
+
+  setTimeout(()=>{
+    if(document.getElementById('ch-rev7')){
+      chartInstances.rev7=new Chart(document.getElementById('ch-rev7'),{
+        type:'bar',data:{labels:dayLabels,datasets:[{label:'Revenue',data:dayRevs,backgroundColor:'#1D9E75',borderRadius:5}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}},
+                  y:{grid:{color:'#f0f4f2'},ticks:{color:'#94a3b8',font:{size:10},callback:v=>'UGX '+(v/1000).toFixed(0)+'k'}}}}
+      });
+    }
+    if(document.getElementById('ch-pm')){
+      chartInstances.pm=new Chart(document.getElementById('ch-pm'),{
+        type:'doughnut',data:{labels:Object.values(PAY_LABELS),datasets:[{data:pmCounts,backgroundColor:pmColors,borderWidth:2,borderColor:'#fff',hoverOffset:4}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'right',labels:{font:{size:10},color:'#64748b',boxWidth:10}}}}
+      });
+    }
+    if(document.getElementById('ch-parks')){
+      chartInstances.parks=new Chart(document.getElementById('ch-parks'),{
+        type:'bar',data:{labels:parkRevs.map(p=>p.name),datasets:[{label:'Revenue',data:parkRevs.map(p=>p.rev),backgroundColor:parkRevs.map((_,i)=>i===0?'#085041':'#1D9E75'),borderRadius:4}]},
+        options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+          scales:{x:{grid:{color:'#f0f4f2'},ticks:{color:'#94a3b8',font:{size:10},callback:v=>'UGX '+(v/1e6).toFixed(0)+'M'}},
+                  y:{grid:{display:false},ticks:{color:'#64748b',font:{size:10}}}}}
+      });
+    }
+  },50);
+
+  const recentTx=txAll.slice(-5).reverse();
+
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Dashboard</div><div class="page-sub">Uganda Wildlife Authority · National Parks Revenue Overview</div></div>
+    <div class="topbar-right">
+      <span class="topbar-badge badge-primary">${today}</span>
+      <span class="topbar-badge badge-green">● ${DB.count('gates',g=>g.status==='online')}/${DB.count('gates')} gates online</span>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:16px">
+    <div class="stat-box accent">
+      <div class="stat-label">YTD Total Revenue</div>
+      <div class="stat-val">${fmtM(totalRev)}</div>
+      <div class="stat-sub">All 9 parks combined</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Today's Revenue</div>
+      <div class="stat-val" style="font-size:18px">${fmt(todayRev)}</div>
+      <div class="stat-sub up">${todayTx.length} transactions</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Total Visitors</div>
+      <div class="stat-val">${totalVis.toLocaleString()}</div>
+      <div class="stat-sub">Logged entries</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Open Anomalies</div>
+      <div class="stat-val" style="color:${openAlerts>0?'#ef4444':'#22c55e'}">${openAlerts}</div>
+      <div class="stat-sub ${openAlerts>0?'down':''}">${openAlerts>0?'Require attention':'All clear'}</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">Revenue — last 7 days</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="ch-rev7"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Payment method split</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="ch-pm"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">Revenue by park</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="ch-parks"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent transactions</div>
+      ${recentTx.length===0?`<div class="empty-state"><div class="empty-state-icon">📭</div><div>No transactions yet. Use the Gate POS to enter one.</div></div>`:`
+      <div class="table-wrap"><table>
+        <thead><tr><th>Park</th><th>Plate</th><th>Amount</th><th>Method</th><th>Time</th></tr></thead>
+        <tbody>
+          ${recentTx.map(t=>`<tr>
+            <td class="td-bold">${parkName(t.parkId).split(' ')[0]}</td>
+            <td class="td-muted">${esc(t.plate)}</td>
+            <td class="td-green">${fmt(t.total)}</td>
+            <td><span class="pm-icon ${t.payMethod==='mobile_money'?'mm':t.payMethod}">${PAY_ICONS[t.payMethod]||''} ${PAY_LABELS[t.payMethod]||t.payMethod}</span></td>
+            <td class="td-muted">${fmtTime(t.timestamp)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Gate network status</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      ${DB.all('gates').map(g=>`
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${parkName(g.parkId).split(' ')[0]}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">${esc(g.name)}</div>
+        <div class="g-status g-${g.status}"><span class="g-dot ${g.status}"></span>
+          ${g.status==='online'?'Online':g.status==='degraded'?'Degraded':'Offline'}
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Uptime: ${g.uptime}%</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   REVENUE VIEW
+════════════════════════════════════════════ */
+function buildRevenue(){
+  const txAll=DB.all('transactions');
+  const totalRev=DB.sum('transactions','total');
+  const totalVis=DB.sum('transactions','visitorCount');
+  const parks=DB.all('parks');
+
+  // monthly buckets
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthRevs=months.map((_,i)=>{
+    const m=String(i+1).padStart(2,'0');
+    return DB.sum('transactions','total',t=>t.date?.startsWith(`2026-${m}`)||t.date?.startsWith(`2025-${m}`));
+  });
+
+  setTimeout(()=>{
+    if(document.getElementById('ch-monthly')){
+      chartInstances.monthly=new Chart(document.getElementById('ch-monthly'),{
+        type:'line',
+        data:{labels:months,datasets:[{label:'Revenue',data:monthRevs,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,.1)',fill:true,tension:.4,borderWidth:2,pointRadius:3}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}},
+                  y:{grid:{color:'#f0f4f2'},ticks:{color:'#94a3b8',font:{size:10},callback:v=>'UGX '+(v/1e6).toFixed(1)+'M'}}}}
+      });
+    }
+  },50);
+
+  const parkStats=parks.map(p=>{
+    const rev=DB.sum('transactions','total',t=>t.parkId===p.id);
+    const vis=DB.sum('transactions','visitorCount',t=>t.parkId===p.id);
+    const cnt=DB.count('transactions',t=>t.parkId===p.id);
+    return {...p,rev,vis,cnt};
+  }).sort((a,b)=>b.rev-a.rev);
+  const maxRev=Math.max(...parkStats.map(p=>p.rev),1);
+
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Revenue Analytics</div><div class="page-sub">All parks · YTD 2026</div></div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="navigate('reports')">↓ Export CSV</button>
+    </div>
+  </div>
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="stat-box accent"><div class="stat-label">Total Revenue</div><div class="stat-val">${fmtM(totalRev)}</div><div class="stat-sub">All transactions</div></div>
+    <div class="stat-box"><div class="stat-label">Total Transactions</div><div class="stat-val">${DB.count('transactions').toLocaleString()}</div><div class="stat-sub up">↑ growing</div></div>
+    <div class="stat-box"><div class="stat-label">Total Visitors</div><div class="stat-val">${totalVis.toLocaleString()}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Monthly revenue trend</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="ch-monthly"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Park-by-park breakdown</div>
+    ${parkStats.map((p,i)=>`
+    <div style="padding:10px 0;border-bottom:${i<parkStats.length-1?'1px solid #f0f4f2':'none'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${p.icon||'🌿'}</span>
+          <div><div style="font-size:13px;font-weight:700">${p.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${p.cnt} transactions · ${p.vis} visitors</div></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:800;color:#16a34a">${fmt(p.rev)}</div>
+          <span class="badge badge-primary">Cat ${p.cat}</span>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(p.rev/maxRev*100)}%;background:var(--primary-light)"></div></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   PARKS & GATES
+════════════════════════════════════════════ */
+function buildParks(){
+  const parks=DB.all('parks');
+  const gates=DB.all('gates');
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Parks &amp; Gates</div><div class="page-sub">Configuration and status</div></div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="showAddGate()">+ Add gate</button>
+      <button class="btn btn-outline btn-sm" onclick="showAddPark()">+ Add park</button>
+    </div>
+  </div>
+  <div id="park-form-area"></div>
+  ${parks.map(p=>{
+    const pg=gates.filter(g=>g.parkId===p.id);
+    const fees=FEES[p.cat];
+    return `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:28px">${p.icon||'🌿'}</span>
+          <div><div style="font-size:15px;font-weight:800">${esc(p.name)}</div>
+          <div style="font-size:12px;color:var(--muted)">${p.region} · <span class="badge badge-primary">Category ${p.cat}</span></div></div>
+        </div>
+        <div style="text-align:right;font-size:12px;color:var(--muted)">
+          <div>EA adult: <strong style="color:var(--primary)">${fmt(fees.ea_adult)}</strong></div>
+          <div>Foreign: <strong style="color:var(--primary)">${fmt(fees.foreigner)}</strong></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">
+        ${pg.map(g=>`
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">${esc(g.name)}</div>
+          <div class="g-status g-${g.status}"><span class="g-dot ${g.status}"></span>
+            ${g.status==='online'?'Online':g.status==='degraded'?'Degraded':'Offline'}
+          </div>
+          <div style="display:flex;gap:4px;margin-top:6px">
+            ${['online','degraded','offline'].map(s=>`
+            <button class="btn btn-xs ${g.status===s?'btn-primary':'btn-outline'}" onclick="updateGateStatus('${g.id}','${s}')">${s}</button>`).join('')}
+          </div>
+        </div>`).join('')}
+        ${pg.length===0?'<div style="color:var(--muted);font-size:12px;padding:10px">No gates configured</div>':''}
+      </div>
+    </div>`;
+  }).join('')}`;
+}
+
+function showAddPark(){
+  document.getElementById('park-form-area').innerHTML=`
+  <div class="card" style="margin-bottom:16px;border:2px solid var(--primary-light)">
+    <div class="card-title">Add new park</div>
+    <div class="form-row cols-3">
+      <div class="form-group"><label>Park name</label><input class="form-control" id="np-name" placeholder="e.g. Kibale Forest"/></div>
+      <div class="form-group"><label>Region</label><input class="form-control" id="np-region" placeholder="e.g. Western"/></div>
+      <div class="form-group"><label>Fee category</label>
+        <select class="form-control" id="np-cat"><option value="Ap">A+ (Premium)</option><option value="A">A (Standard)</option><option value="B">B (Budget)</option></select>
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>Icon (emoji)</label><input class="form-control" id="np-icon" placeholder="🌿" maxlength="2"/></div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="savePark()">Save park</button>
+      <button class="btn btn-outline" onclick="document.getElementById('park-form-area').innerHTML=''">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function savePark(){
+  const name=document.getElementById('np-name').value.trim();
+  const region=document.getElementById('np-region').value.trim();
+  const cat=document.getElementById('np-cat').value;
+  const icon=document.getElementById('np-icon').value||'🌿';
+  if(!name||!region){toast('Please fill all required fields','err');return;}
+  const id='park_'+name.toLowerCase().replace(/\s+/g,'_').slice(0,12);
+  DB.insert('parks',{id,name,region,cat,icon});
+  toast('Park "'+name+'" added successfully');
+  navigate('parks');
+}
+
+function showAddGate(){
+  const parks=DB.all('parks');
+  document.getElementById('park-form-area').innerHTML=`
+  <div class="card" style="margin-bottom:16px;border:2px solid var(--primary-light)">
+    <div class="card-title">Add new gate</div>
+    <div class="form-row cols-3">
+      <div class="form-group"><label>Park</label>
+        <select class="form-control" id="ng-park">${parks.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Gate name</label><input class="form-control" id="ng-name" placeholder="e.g. North Entrance"/></div>
+      <div class="form-group"><label>Initial status</label>
+        <select class="form-control" id="ng-status"><option value="online">Online</option><option value="degraded">Degraded</option><option value="offline">Offline</option></select>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveGate()">Save gate</button>
+      <button class="btn btn-outline" onclick="document.getElementById('park-form-area').innerHTML=''">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function saveGate(){
+  const parkId=document.getElementById('ng-park').value;
+  const name=document.getElementById('ng-name').value.trim();
+  const status=document.getElementById('ng-status').value;
+  if(!name){toast('Gate name required','err');return;}
+  const id='gate_'+name.toLowerCase().replace(/\s+/g,'_').slice(0,10)+'_'+Date.now().toString(36).slice(-3);
+  DB.insert('gates',{id,parkId,name,status,uptime:99.0});
+  toast('Gate "'+name+'" added');
+  navigate('parks');
+}
+
+function updateGateStatus(gateId,status){
+  DB.update('gates',gateId,{status});
+  toast('Gate status updated to '+status);
+  navigate('parks');
+}
+
+/* ════════════════════════════════════════════
+   TRANSACTIONS (ADMIN)
+════════════════════════════════════════════ */
+function buildTransactions(){
+  const txAll=DB.all('transactions').slice().reverse();
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Transactions</div><div class="page-sub">${txAll.length} total records</div></div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="exportTxCSV()">↓ Export CSV</button>
+    </div>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="tx-search" placeholder="Search plate, park, payment method..." oninput="filterTx()"/>
+    <select class="form-control" id="tx-park-filter" style="width:180px" onchange="filterTx()">
+      <option value="">All parks</option>
+      ${DB.all('parks').map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}
+    </select>
+    <select class="form-control" id="tx-pay-filter" style="width:150px" onchange="filterTx()">
+      <option value="">All methods</option>
+      ${Object.entries(PAY_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+    </select>
+  </div>
+  <div id="tx-table-wrap">
+  <div class="table-wrap"><table id="tx-table">
+    <thead><tr><th>Ref</th><th>Date</th><th>Park</th><th>Gate</th><th>Plate</th><th>Visitors</th><th>Method</th><th>Vehicle Fee</th><th>Visitor Fee</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody id="tx-tbody">
+      ${txAll.slice(0,50).map(t=>txRow(t)).join('')}
+    </tbody>
+  </table></div>
+  ${txAll.length>50?`<div style="padding:10px;text-align:center;color:var(--muted);font-size:12px">Showing 50 of ${txAll.length} records. Export CSV for full dataset.</div>`:''}
+  </div>`;
+}
+
+function txRow(t){
+  return `<tr>
+    <td class="td-muted" style="font-family:monospace;font-size:11px">${t.id}</td>
+    <td class="td-muted">${fmtDate(t.date)}</td>
+    <td class="td-bold">${esc(parkName(t.parkId).split(' ')[0])}</td>
+    <td class="td-muted">${esc(gateName(t.gateId))}</td>
+    <td class="td-bold">${esc(t.plate||'-')}</td>
+    <td style="text-align:center">${t.visitorCount||0}</td>
+    <td><span class="pm-icon ${t.payMethod==='mobile_money'?'mm':t.payMethod}">${PAY_ICONS[t.payMethod]||''} ${PAY_LABELS[t.payMethod]||t.payMethod}</span></td>
+    <td>${fmt(t.vehicleFee)}</td>
+    <td>${fmt(t.visitorFee)}</td>
+    <td class="td-green">${fmt(t.total)}</td>
+    <td><span class="badge badge-green">✓ ${esc(t.status)}</span></td>
+  </tr>`;
+}
+
+function filterTx(){
+  const q=(document.getElementById('tx-search').value||'').toLowerCase();
+  const parkF=document.getElementById('tx-park-filter').value;
+  const payF=document.getElementById('tx-pay-filter').value;
+  const txAll=DB.all('transactions').slice().reverse();
+  const filtered=txAll.filter(t=>{
+    const txt=(parkName(t.parkId)+' '+t.plate+' '+t.payMethod).toLowerCase();
+    return (!q||txt.includes(q))&&(!parkF||t.parkId===parkF)&&(!payF||t.payMethod===payF);
+  });
+  const tbody=document.getElementById('tx-tbody');
+  if(tbody) tbody.innerHTML=filtered.slice(0,50).map(t=>txRow(t)).join('');
+}
+
+function exportTxCSV(){
+  const txAll=DB.all('transactions');
+  const rows=[['ID','Date','Park','Gate','Plate','Visitors','Payment Method','Vehicle Fee UGX','Visitor Fee UGX','Total UGX','Status']];
+  txAll.forEach(t=>rows.push([t.id,t.date,parkName(t.parkId),gateName(t.gateId),t.plate,t.visitorCount,PAY_LABELS[t.payMethod]||t.payMethod,t.vehicleFee,t.visitorFee,t.total,t.status]));
+  downloadCSV(rows,'UWA_Transactions_'+new Date().toISOString().split('T')[0]+'.csv');
+  toast('CSV exported successfully');
+}
+
+function downloadCSV(rows,filename){
+  const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+}
+
+/* ════════════════════════════════════════════
+   VISITORS MANAGEMENT (ADMIN)
+════════════════════════════════════════════ */
+function buildVisitorsMgmt(){
+  const visitors=DB.where('users',u=>u.role==='visitor');
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Visitor Accounts</div><div class="page-sub">${visitors.length} registered visitors</div></div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Nationality</th><th>RFID Tag</th><th>RFID Balance</th><th>Bookings</th><th>Joined</th></tr></thead>
+      <tbody>
+        ${visitors.length===0?`<tr><td colspan="8" class="empty-state">No visitors registered yet</td></tr>`:
+        visitors.map(v=>{
+          const bookings=DB.count('bookings',b=>b.visitorId===v.id);
+          return `<tr>
+            <td class="td-bold">${esc(v.name)}</td>
+            <td class="td-muted">${esc(v.email)}</td>
+            <td class="td-muted">${esc(v.phone||'-')}</td>
+            <td>${esc(v.nationality||'-')}</td>
+            <td style="font-family:monospace;font-size:11px">${esc(v.rfidTag||'—')}</td>
+            <td class="${v.rfidBalance>0?'td-green':''}">${v.rfidBalance>0?fmt(v.rfidBalance):'—'}</td>
+            <td style="text-align:center">${bookings}</td>
+            <td class="td-muted">${fmtDate(v.createdAt)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   ANOMALIES
+════════════════════════════════════════════ */
+function buildAnomalies(){
+  const anomalies=DB.all('anomalies');
+  const open=anomalies.filter(a=>a.status==='open');
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Anomalies &amp; Alerts</div><div class="page-sub">${open.length} open · ${anomalies.filter(a=>a.status==='resolved').length} resolved</div></div>
+    <div class="topbar-right">
+      <button class="btn btn-outline btn-sm" onclick="showAddAnomaly()">+ Log anomaly</button>
+    </div>
+  </div>
+  <div id="anomaly-form-area"></div>
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="stat-box" style="border-color:#fecaca">
+      <div class="stat-label">High severity</div>
+      <div class="stat-val" style="color:var(--danger)">${anomalies.filter(a=>a.severity==='high').length}</div>
+    </div>
+    <div class="stat-box" style="border-color:#fde68a">
+      <div class="stat-label">Medium severity</div>
+      <div class="stat-val" style="color:var(--warn)">${anomalies.filter(a=>a.severity==='medium').length}</div>
+    </div>
+    <div class="stat-box" style="border-color:#bbf7d0">
+      <div class="stat-label">Low severity</div>
+      <div class="stat-val" style="color:#16a34a">${anomalies.filter(a=>a.severity==='low').length}</div>
+    </div>
+  </div>
+  ${anomalies.slice().reverse().map(a=>`
+  <div class="anomaly-item ${a.status==='resolved'?'resolved':a.severity}" id="ano-${a.id}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="anomaly-title">${esc(a.type)}</div>
+        <div class="anomaly-detail">${esc(parkName(a.parkId))} ${a.gateId?'— '+gateName(a.gateId):''} · ${a.date}</div>
+        <div class="anomaly-detail" style="margin-top:4px">${esc(a.detail)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <span class="badge ${a.severity==='high'?'badge-red':a.severity==='medium'?'badge-amber':'badge-green'}">${a.severity.toUpperCase()}</span>
+        <span class="badge ${a.status==='open'?'badge-blue':'badge-gray'}">${a.status}</span>
+        ${a.status==='open'?`<button class="btn btn-xs btn-outline" onclick="resolveAnomaly('${a.id}')">Resolve</button>`:''}
+      </div>
+    </div>
+  </div>`).join('')}
+  ${anomalies.length===0?`<div class="empty-state"><div class="empty-state-icon">✅</div><div>No anomalies logged.</div></div>`:''}`;
+}
+
+function showAddAnomaly(){
+  const parks=DB.all('parks');
+  document.getElementById('anomaly-form-area').innerHTML=`
+  <div class="card" style="margin-bottom:16px;border:2px solid var(--warn)">
+    <div class="card-title">Log new anomaly</div>
+    <div class="form-row cols-3">
+      <div class="form-group"><label>Park</label>
+        <select class="form-control" id="an-park"><option value="">Select park</option>${parks.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>Type</label>
+        <select class="form-control" id="an-type">
+          <option>Sync gap</option><option>Revenue variance</option><option>Capture shortfall</option>
+          <option>Cash &gt; 15%</option><option>Transaction spike</option><option>Hardware fault</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Severity</label>
+        <select class="form-control" id="an-sev"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px"><label>Detail</label>
+      <textarea class="form-control" id="an-detail" rows="2" placeholder="Describe the issue..."></textarea>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveAnomaly()">Log anomaly</button>
+      <button class="btn btn-outline" onclick="document.getElementById('anomaly-form-area').innerHTML=''">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function saveAnomaly(){
+  const parkId=document.getElementById('an-park').value;
+  const type=document.getElementById('an-type').value;
+  const severity=document.getElementById('an-sev').value;
+  const detail=document.getElementById('an-detail').value.trim();
+  if(!parkId||!detail){toast('Please select a park and add details','err');return;}
+  DB.insert('anomalies',{parkId,type,severity,detail,status:'open',date:new Date().toISOString().split('T')[0]});
+  toast('Anomaly logged');navigate('anomalies');
+}
+
+function resolveAnomaly(id){
+  DB.update('anomalies',id,{status:'resolved'});
+  toast('Anomaly marked as resolved');navigate('anomalies');
+}
+
+/* ════════════════════════════════════════════
+   REPORTS & EXPORT
+════════════════════════════════════════════ */
+function buildReports(){
+  const txAll=DB.all('transactions');
+  const totalRev=DB.sum('transactions','total');
+  const parks=DB.all('parks');
+
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Reports &amp; Export</div><div class="page-sub">Download data and policy briefs</div></div>
+  </div>
+  <div class="grid-4" style="margin-bottom:16px">
+    <div class="stat-box accent"><div class="stat-label">Total Revenue</div><div class="stat-val">${fmtM(totalRev)}</div></div>
+    <div class="stat-box"><div class="stat-label">Transactions</div><div class="stat-val">${txAll.length}</div></div>
+    <div class="stat-box"><div class="stat-label">Parks</div><div class="stat-val">${parks.length}</div></div>
+    <div class="stat-box"><div class="stat-label">Gates</div><div class="stat-val">${DB.count('gates')}</div></div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">Export reports</div>
+      ${[
+        {label:'Full transaction log',desc:'All gates · All parks · Complete history',fn:'exportTxCSV'},
+        {label:'Park performance summary',desc:'Revenue, visitors, capture rate per park',fn:'exportParkCSV'},
+        {label:'Gate status report',desc:'Uptime, tx count, anomaly summary per gate',fn:'exportGateCSV'},
+        {label:'Visitor registry',desc:'All registered visitor accounts',fn:'exportVisitorCSV'},
+        {label:'Anomaly audit log',desc:'All flagged events with severity and resolution',fn:'exportAnomalyCSV'},
+        {label:'Booking history',desc:'All park entry bookings',fn:'exportBookingCSV'},
+      ].map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f4f2">
+        <div><div style="font-size:13px;font-weight:600">${r.label}</div><div style="font-size:11px;color:var(--muted)">${r.desc}</div></div>
+        <button class="btn btn-outline btn-sm" onclick="${r.fn}()">↓ CSV</button>
+      </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Policy brief — scale-up recommendations</div>
+      ${[
+        {icon:'🏆',title:'RFID + ANPR scale-up',body:'Pilot demonstrates <10s avg transaction time. Recommend full ANPR-assisted Tier 2 roll-out to all 41 gates by Q1 2027.'},
+        {icon:'📶',title:'Offline resilience investment',body:'Kidepo and Bwindi experience daily 4G drops. Recommend Starlink VSAT backup at 8 remote gates (est. UGX 184M capex).'},
+        {icon:'💰',title:'Revenue leakage elimination',body:'Cash share at system-wide low. Full electronic capture projects additional UGX 3.9M annually per UWA audit baseline.'},
+        {icon:'📊',title:'Dynamic capacity management',body:'Real-time data enables diversion from Kasenyi plains to Ishasha gate. Recommend integration with UWA ranger dispatch.'},
+        {icon:'🌍',title:'EA integration',body:'Kenya (KWS) and Rwanda (RDB) use compatible ISO 15693 tags. A reciprocal tag-recognition agreement would ease regional tourism.'},
+      ].map(p=>`
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f0f4f2">
+        <span style="font-size:20px;flex-shrink:0">${p.icon}</span>
+        <div><div style="font-size:12px;font-weight:700;margin-bottom:2px">${p.title}</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5">${p.body}</div></div>
+      </div>`).join('')}
+      <button class="btn btn-primary btn-sm btn-block" style="margin-top:12px" onclick="exportPolicyBrief()">↓ Download policy brief (TXT)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Database management</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--muted)">
+        ${txAll.length} transactions · ${DB.count('bookings')} bookings · ${DB.count('users')} users · ${DB.count('vehicles')} vehicles stored in browser database.
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="if(confirm('Reset all data and reload seed data?')){DB.clearAll();seedDB();toast('Database reset and reseeded');navigate('reports');}">⚠ Reset &amp; reseed database</button>
+    </div>
+  </div>`;
+}
+
+function exportParkCSV(){
+  const parks=DB.all('parks');
+  const rows=[['Park','Category','Region','Total Revenue UGX','Transactions','Visitors']];
+  parks.forEach(p=>rows.push([p.name,p.cat,p.region,
+    DB.sum('transactions','total',t=>t.parkId===p.id),
+    DB.count('transactions',t=>t.parkId===p.id),
+    DB.sum('transactions','visitorCount',t=>t.parkId===p.id),
+  ]));
+  downloadCSV(rows,'UWA_Park_Performance_'+new Date().toISOString().split('T')[0]+'.csv');
+  toast('Park report exported');
+}
+
+function exportGateCSV(){
+  const gates=DB.all('gates');
+  const rows=[['Gate','Park','Status','Uptime %','Transactions Today']];
+  gates.forEach(g=>rows.push([g.name,parkName(g.parkId),g.status,g.uptime,
+    DB.count('transactions',t=>t.gateId===g.id&&t.date===new Date().toISOString().split('T')[0])
+  ]));
+  downloadCSV(rows,'UWA_Gate_Status_'+new Date().toISOString().split('T')[0]+'.csv');
+  toast('Gate report exported');
+}
+
+function exportVisitorCSV(){
+  const visitors=DB.where('users',u=>u.role==='visitor');
+  const rows=[['Name','Email','Phone','Nationality','RFID Tag','RFID Balance','Joined']];
+  visitors.forEach(v=>rows.push([v.name,v.email,v.phone||'',v.nationality||'',v.rfidTag||'',v.rfidBalance||0,fmtDate(v.createdAt)]));
+  downloadCSV(rows,'UWA_Visitors_'+new Date().toISOString().split('T')[0]+'.csv');
+  toast('Visitor data exported');
+}
+
+function exportAnomalyCSV(){
+  const rows=[['ID','Date','Park','Gate','Type','Severity','Status','Detail']];
+  DB.all('anomalies').forEach(a=>rows.push([a.id,a.date,parkName(a.parkId),gateName(a.gateId),a.type,a.severity,a.status,a.detail]));
+  downloadCSV(rows,'UWA_Anomalies_'+new Date().toISOString().split('T')[0]+'.csv');
+  toast('Anomaly log exported');
+}
+
+function exportBookingCSV(){
+  const rows=[['Ref','Date','Visitor','Park','Plate','Visitors','Payment','Total UGX','Status']];
+  DB.all('bookings').forEach(b=>{
+    const v=DB.find('users',b.visitorId);
+    rows.push([b.ref,b.date,v?.name||b.visitorId,parkName(b.parkId),b.plate,b.visitorCount,PAY_LABELS[b.payMethod]||b.payMethod,b.total,b.status]);
+  });
+  downloadCSV(rows,'UWA_Bookings_'+new Date().toISOString().split('T')[0]+'.csv');
+  toast('Booking history exported');
+}
+
+function exportPolicyBrief(){
+  const text=`UGANDA WILDLIFE AUTHORITY
+UNIFIED ELECTRONIC TOLL GATE SYSTEM
+POLICY BRIEF — MAY 2026
+Generated: ${new Date().toLocaleString()}
+
+EXECUTIVE SUMMARY
+This brief summarises findings from the pilot deployment of the UWA Unified Electronic Toll Gate System across 9 national parks (41 gates). The system integrates mobile money (MTN/Airtel), card (Visa/Mastercard), RFID tags and cash fallback into a single platform.
+
+KEY METRICS
+- Total revenue recorded: ${fmt(DB.sum('transactions','total'))}
+- Total transactions: ${DB.count('transactions')}
+- Total visitor entries: ${DB.sum('transactions','visitorCount')}
+- Average transaction time: 8.3 seconds (vs 2-5 minutes manual)
+- Gates active: ${DB.count('gates',g=>g.status==='online')} of ${DB.count('gates')}
+
+RECOMMENDATIONS
+1. RFID + ANPR SCALE-UP
+   Pilot demonstrates <10s average transaction time across all electronic channels.
+   Recommend full ANPR-assisted Tier 2 roll-out to all 41 gates by Q1 2027.
+   Estimated capex: UGX 2.4 Billion.
+
+2. OFFLINE RESILIENCE INVESTMENT
+   Kidepo and Bwindi experience daily 4G connectivity drops, reverting transactions to cash.
+   Recommend Starlink VSAT backup units at 8 remote gates.
+   Estimated capex: UGX 184 Million.
+
+3. REVENUE LEAKAGE ELIMINATION
+   Pre-deployment audit estimated 11-14% gate revenue (approx. USD 3.9M) unrecorded annually.
+   Full electronic capture is projected to recover this leakage within 18 months.
+
+4. DYNAMIC CAPACITY MANAGEMENT
+   Real-time visitation data now enables active gate diversion (e.g. Kasenyi → Ishasha).
+   Recommend integration with UWA ranger dispatch and wildlife monitoring systems.
+
+5. EAST AFRICA INTEGRATION
+   Kenya Wildlife Service (KWS) and Rwanda Development Board (RDB) use compatible
+   ISO 15693 RFID tag standards. A reciprocal tag-recognition agreement would
+   significantly reduce friction for regional tourists.
+
+REFERENCES
+- UWA Internal Audit Report: Gate Revenue Assurance (2022)
+- UWA Visitor Satisfaction Survey (2023)
+- Kenya Wildlife Service Annual Report (2021)
+- SANRAL Electronic Toll Collection Performance Report (2020)
+- UNRA Upesi Toll System Review (2023)
+
+Uganda Wildlife Authority
+Plot 3 Kintu Road, Nakasero, Kampala
+www.ugandawildlife.org
+`;
+  const blob=new Blob([text],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='UWA_Policy_Brief_2026.txt';a.click();
+  toast('Policy brief downloaded');
+}
+
+/* ════════════════════════════════════════════
+   SETTINGS
+════════════════════════════════════════════ */
+function buildSettings(){
+  return `
+  <div class="topbar"><div><div class="page-title">System Settings</div><div class="page-sub">Manage fee schedules, users and system configuration</div></div></div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Fee schedule (UGX) — editable</div>
+      ${Object.entries(FEES).map(([cat,f])=>`
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:800;color:var(--primary);margin-bottom:8px">Category ${cat}</div>
+        <div class="form-row cols-2">
+          ${CAT_KEYS.map((k,i)=>`
+          <div class="form-group">
+            <label>${CAT_LABELS[i]}</label>
+            <input class="form-control" value="${f[k].toLocaleString()}" readonly title="Contact UWA finance to update fees"/>
+          </div>`).join('')}
+        </div>
+      </div>`).join('')}
+      <div style="font-size:11px;color:var(--muted)">Fee schedule is set by UWA Finance. Contact admin to update.</div>
+    </div>
+    <div class="flex-col">
+      <div class="card">
+        <div class="card-title">Add operator account</div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Full name</label><input class="form-control" id="op-name" placeholder="Operator name"/></div>
+          <div class="form-group"><label>Email</label><input class="form-control" id="op-email" type="email" placeholder="op@uwa.go.ug"/></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Assigned gate</label>
+            <select class="form-control" id="op-gate">
+              ${DB.all('gates').map(g=>`<option value="${g.id}">${esc(gateName(g.id))} — ${esc(parkName(g.parkId).split(' ')[0])}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label>Password</label><input class="form-control" id="op-pass" type="password" placeholder="Set password"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="addOperator()">Create operator account</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Operator accounts</div>
+        ${DB.where('users',u=>u.role==='operator').map(u=>`
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f4f2">
+          <div><div style="font-size:13px;font-weight:600">${esc(u.name)}</div>
+          <div style="font-size:11px;color:var(--muted)">${esc(u.email)} · Gate: ${esc(gateName(u.gateId))}</div></div>
+          <button class="btn btn-xs btn-danger" onclick="deleteOperator('${u.id}')">Remove</button>
+        </div>`).join('')}
+        ${DB.count('users',u=>u.role==='operator')===0?`<div class="empty-state">No operators yet.</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function addOperator(){
+  const name=document.getElementById('op-name').value.trim();
+  const email=document.getElementById('op-email').value.trim();
+  const gateId=document.getElementById('op-gate').value;
+  const pass=document.getElementById('op-pass').value;
+  if(!name||!email||!pass){toast('Please fill all fields','err');return;}
+  const gate=DB.find('gates',gateId);
+  DB.insert('users',{name,email,password:pass,role:'operator',gateId,parkId:gate?.parkId,phone:''});
+  toast('Operator '+name+' added');navigate('settings');
+}
+
+function deleteOperator(id){
+  if(id==='operator'){toast('Cannot delete the default demo operator','err');return;}
+  if(confirm('Remove this operator account?')){DB.delete('users',id);toast('Operator removed');navigate('settings');}
+}
+
+/* ════════════════════════════════════════════
+   GATE POS
+════════════════════════════════════════════ */
+let posState={parkId:'',gateId:'',qty:{foreigner:0,resident:0,ea_adult:0,ea_child:0},payMethod:'mobile_money',plate:'',vehClass:'saloon',regType:'local'};
+
+function buildGatePOS(isAdmin){
+  const parks=DB.all('parks');
+  const gates=DB.all('gates').filter(g=>g.status!=='offline');
+  const user=Auth.user;
+  const defaultPark=isAdmin?parks[0]?.id:(user.parkId||parks[0]?.id);
+  const defaultGate=isAdmin?gates[0]?.id:(user.gateId||gates[0]?.id);
+  if(!posState.parkId) posState.parkId=defaultPark||'';
+  if(!posState.gateId) posState.gateId=defaultGate||'';
+
+  const selectedPark=DB.find('parks',posState.parkId)||parks[0];
+  const fees=selectedPark?FEES[selectedPark.cat]:{foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  const vf=posState.parkId?VEH_FEES[posState.vehClass][posState.regType]:0;
+  const visTotal=CAT_KEYS.reduce((s,k)=>s+(posState.qty[k]||0)*fees[k],0);
+  const total=vf+visTotal;
+  const pax=CAT_KEYS.reduce((s,k)=>s+(posState.qty[k]||0),0);
+  const gate=DB.find('gates',posState.gateId);
+
+  const todayTx=DB.where('transactions',t=>t.gateId===posState.gateId&&t.date===new Date().toISOString().split('T')[0]);
+  const todayRev=todayTx.reduce((s,t)=>s+(t.total||0),0);
+
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Gate POS</div>
+    <div class="page-sub">${selectedPark?selectedPark.name:'—'} · ${gate?gate.name:'—'} · ${user.name}</div></div>
+    <div class="topbar-right">
+      ${gate?`<span class="g-status g-${gate.status}"><span class="g-dot ${gate.status}"></span> Gate ${gate.status}</span>`:''}
+    </div>
+  </div>
+  <div class="pos-wrap">
+    <div class="pos-left">
+      <div class="pos-header">
+        <div>
+          <div class="pos-header-left">${gate?.name||'Gate'} — ${selectedPark?.name||'Park'}</div>
+          <div class="pos-header-sub">Operator: ${user.name} · ${new Date().toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div class="g-status g-${gate?.status||'online'}"><span class="g-dot ${gate?.status||'online'}"></span>
+          <span style="color:#9FE1CB;font-size:11px">${gate?.status||'online'}</span>
+        </div>
+      </div>
+
+      ${isAdmin?`<div class="form-row cols-2" style="margin-bottom:12px">
+        <div class="form-group"><label>Park</label>
+          <select class="form-control" id="pos-park" onchange="posChangePark(this.value)">
+            ${parks.map(p=>`<option value="${p.id}" ${posState.parkId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label>Gate</label>
+          <select class="form-control" id="pos-gate" onchange="posState.gateId=this.value">
+            ${gates.map(g=>`<option value="${g.id}" ${posState.gateId===g.id?'selected':''}>${esc(g.name)} — ${esc(parkName(g.parkId).split(' ')[0])}</option>`).join('')}
+          </select>
+        </div>
+      </div>`:''}
+
+      <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Vehicle details</div>
+      <div class="form-row cols-3" style="margin-bottom:14px">
+        <div class="form-group" style="grid-column:1/3">
+          <label>Plate number</label>
+          <input class="form-control" id="pos-plate" value="${posState.plate}" placeholder="e.g. UG 234 C" oninput="posState.plate=this.value.toUpperCase();this.value=this.value.toUpperCase()"/>
+        </div>
+        <div class="form-group"><label>Registration</label>
+          <select class="form-control" id="pos-reg" onchange="posState.regType=this.value;refreshPOSTotal()">
+            <option value="local" ${posState.regType==='local'?'selected':''}>Uganda</option>
+            <option value="ea"    ${posState.regType==='ea'?'selected':''}>EA (KE/TZ/RW)</option>
+            <option value="foreign" ${posState.regType==='foreign'?'selected':''}>Foreign</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols-2" style="margin-bottom:14px">
+        <div class="form-group"><label>Vehicle class</label>
+          <select class="form-control" id="pos-veh" onchange="posState.vehClass=this.value;refreshPOSTotal()">
+            <option value="saloon"  ${posState.vehClass==='saloon'?'selected':''}>Saloon / SUV</option>
+            <option value="minibus" ${posState.vehClass==='minibus'?'selected':''}>Minibus (≤24)</option>
+            <option value="bus"     ${posState.vehClass==='bus'?'selected':''}>Bus (25+)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Visitors</div>
+      <div class="visitor-table">
+        <div class="vt-head"><span>Category</span><span>Rate (UGX)</span><span>Qty</span><span style="text-align:right">Subtotal</span></div>
+        ${CAT_KEYS.map((k,i)=>`
+        <div class="vt-row ${posState.qty[k]>0?'has-qty':''}" id="vt-row-${k}">
+          <div class="vt-cat">${CAT_LABELS[i]}</div>
+          <div class="vt-rate">${fmt(fees[k])}</div>
+          <div class="qty-ctrl">
+            <button class="qty-btn" onclick="posAdj('${k}',-1)">−</button>
+            <span class="qty-val" id="qty-${k}">${posState.qty[k]}</span>
+            <button class="qty-btn" onclick="posAdj('${k}',1)">+</button>
+          </div>
+          <div class="vt-sub" id="sub-${k}">${fmt(fees[k]*posState.qty[k])}</div>
+        </div>`).join('')}
+      </div>
+
+      <div style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:14px">Payment method</div>
+      <div class="pay-grid">
+        ${[['mobile_money','📱','Mobile Money'],['card','💳','Card (POS)'],['rfid','📡','RFID Tag'],['cash','💵','Cash']].map(([k,icon,label])=>`
+        <button class="pay-btn ${posState.payMethod===k?'sel':''}" onclick="posSetPay('${k}')">
+          <span class="pay-btn-icon">${icon}</span>
+          <span class="pay-btn-label">${label}</span>
+        </button>`).join('')}
+      </div>
+
+      ${posState.payMethod==='mobile_money'?`
+      <div class="form-row cols-2" style="margin-top:10px">
+        <div class="form-group"><label>Network</label>
+          <select class="form-control" id="pos-net"><option>MTN Money</option><option>Airtel Money</option></select>
+        </div>
+        <div class="form-group"><label>Phone number</label>
+          <input class="form-control" id="pos-phone" placeholder="07X XXX XXXX"/>
+        </div>
+      </div>`:''}
+      ${posState.payMethod==='rfid'?`<div class="form-row" style="margin-top:10px"><div class="form-group"><label>RFID tag / ref</label><input class="form-control" id="pos-rfid-tag" placeholder="e.g. UG-R-0044"/></div></div>`:''}
+    </div>
+
+    <div class="pos-right">
+      <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Transaction summary</div>
+      <div>
+        ${[
+          ['Park',selectedPark?.name||'—'],
+          ['Category','Category '+(selectedPark?.cat||'—')],
+          ['Vehicle fee',fmt(vf)],
+          ['Visitor fees',fmt(visTotal)],
+          ['Visitors',pax+' pax'],
+          ['Payment',PAY_LABELS[posState.payMethod]],
+        ].map(([l,v])=>`
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--muted)">${l}</span>
+          <span style="font-size:12px;font-weight:600">${v}</span>
+        </div>`).join('')}
+      </div>
+      <div class="total-box">
+        <span class="total-label">Total</span>
+        <span class="total-amt" id="pos-total">${fmt(total)}</span>
+      </div>
+      <button class="btn btn-primary btn-block" id="pos-submit" ${total===0?'disabled':''} onclick="submitTransaction()">
+        ✓ &nbsp; Confirm &amp; open gate
+      </button>
+      <hr class="section-divider"/>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Today at this gate</div>
+      <div class="grid-2">
+        <div style="background:var(--card);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--muted)">Transactions</div>
+          <div style="font-size:20px;font-weight:800">${todayTx.length}</div>
+        </div>
+        <div style="background:var(--card);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--muted)">Revenue</div>
+          <div style="font-size:13px;font-weight:800;color:#16a34a">${fmtM(todayRev)}</div>
+        </div>
+      </div>
+      <div style="background:var(--card);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Avg transaction time</div>
+        <div style="font-size:20px;font-weight:800">8.3<span style="font-size:11px;color:var(--muted)">s ✓ target &lt;10s</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function posChangePark(parkId){
+  posState.parkId=parkId;
+  posState.qty={foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  const v=Auth.isAdmin()?'gate_pos_admin':'gate_pos';
+  navigate(v);
+}
+
+function posAdj(k,d){
+  posState.qty[k]=Math.max(0,(posState.qty[k]||0)+d);
+  const park=DB.find('parks',posState.parkId);
+  const fees=park?FEES[park.cat]:{foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  const el=document.getElementById('qty-'+k);
+  const sel=document.getElementById('sub-'+k);
+  const row=document.getElementById('vt-row-'+k);
+  if(el) el.textContent=posState.qty[k];
+  if(sel) sel.textContent=fmt(fees[k]*posState.qty[k]);
+  if(row) row.className='vt-row '+(posState.qty[k]>0?'has-qty':'');
+  refreshPOSTotal();
+}
+
+function refreshPOSTotal(){
+  const park=DB.find('parks',posState.parkId);
+  const fees=park?FEES[park.cat]:{foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  const vf=posState.parkId?VEH_FEES[posState.vehClass][posState.regType]:0;
+  const visTotal=CAT_KEYS.reduce((s,k)=>s+(posState.qty[k]||0)*fees[k],0);
+  const total=vf+visTotal;
+  const el=document.getElementById('pos-total');
+  if(el) el.textContent=fmt(total);
+  const btn=document.getElementById('pos-submit');
+  if(btn) btn.disabled=total===0;
+}
+
+function posSetPay(method){
+  posState.payMethod=method;
+  const v=Auth.isAdmin()?'gate_pos_admin':'gate_pos';
+  navigate(v);
+}
+
+function submitTransaction(){
+  const park=DB.find('parks',posState.parkId);
+  if(!park){toast('Please select a park','err');return;}
+  const fees=FEES[park.cat];
+  const vf=VEH_FEES[posState.vehClass][posState.regType];
+  const visTotal=CAT_KEYS.reduce((s,k)=>s+(posState.qty[k]||0)*fees[k],0);
+  const total=vf+visTotal;
+  if(total===0){toast('Add at least one visitor to process','warn');return;}
+  const pax=CAT_KEYS.reduce((s,k)=>s+(posState.qty[k]||0),0);
+
+  const tx=DB.insert('transactions',{
+    parkId:posState.parkId,gateId:posState.gateId||'',
+    plate:posState.plate||'(no plate)',visitorCount:pax,
+    vehicleFee:vf,visitorFee:visTotal,total,
+    payMethod:posState.payMethod,
+    date:new Date().toISOString().split('T')[0],
+    timestamp:new Date().toISOString(),
+    status:'completed',operatorId:Auth.user.id,
+  });
+
+  showReceiptOverlay({
+    ref:tx.id,park:park.name,gate:gateName(posState.gateId),
+    plate:posState.plate||'(no plate)',pax,
+    vehicleFee:vf,visitorLines:CAT_KEYS.map((k,i)=>posState.qty[k]>0?{label:CAT_LABELS[i]+' ×'+posState.qty[k],amt:fees[k]*posState.qty[k]}:null).filter(Boolean),
+    total,payMethod:posState.payMethod,
+  });
+
+  posState.qty={foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  posState.plate='';
+}
+
+function showReceiptOverlay(data){
+  const ov=document.getElementById('receipt-overlay');
+  ov.style.display='flex';
+  ov.innerHTML=`
+  <div class="receipt-card">
+    <div class="receipt-logo">UGANDA WILDLIFE AUTHORITY</div>
+    <div class="receipt-title">Entry Receipt</div>
+    <div class="receipt-sub">${esc(data.park)} · ${esc(data.gate)}</div>
+    <hr class="receipt-divider"/>
+    ${[['Ref',data.ref],['Plate',data.plate],['Date',new Date().toLocaleDateString('en-UG',{day:'numeric',month:'short',year:'numeric'})],
+       ['Time',new Date().toLocaleTimeString('en-UG',{hour:'2-digit',minute:'2-digit'})],
+       ['Visitors',data.pax+' pax'],['Payment',PAY_LABELS[data.payMethod]]
+    ].map(([l,v])=>`<div class="receipt-row"><span class="receipt-rl">${l}</span><span class="receipt-rv">${esc(String(v))}</span></div>`).join('')}
+    <hr class="receipt-divider"/>
+    <div class="receipt-row"><span class="receipt-rl">Vehicle fee</span><span class="receipt-rv">${fmt(data.vehicleFee)}</span></div>
+    ${data.visitorLines.map(l=>`<div class="receipt-row"><span class="receipt-rl">${esc(l.label)}</span><span class="receipt-rv">${fmt(l.amt)}</span></div>`).join('')}
+    <div class="receipt-total"><span>Total paid</span><span style="color:var(--primary)">${fmt(data.total)}</span></div>
+    <div class="receipt-ref">Ref: ${data.ref}</div>
+    <div class="barcode">| ||| | || ||| | || ||| |</div>
+    <div class="receipt-ok">✓ Gate opened — safe journey!</div>
+    <button class="btn btn-primary btn-block" onclick="document.getElementById('receipt-overlay').style.display='none';renderView()">New transaction</button>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   MY TRANSACTIONS (OPERATOR)
+════════════════════════════════════════════ */
+function buildMyTransactions(){
+  const txAll=DB.where('transactions',t=>t.operatorId===Auth.user.id).slice().reverse();
+  return `
+  <div class="topbar"><div><div class="page-title">My Transactions</div><div class="page-sub">${txAll.length} total</div></div></div>
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="stat-box accent"><div class="stat-label">Total processed</div><div class="stat-val">${fmtM(txAll.reduce((s,t)=>s+(t.total||0),0))}</div></div>
+    <div class="stat-box"><div class="stat-label">Transactions</div><div class="stat-val">${txAll.length}</div></div>
+    <div class="stat-box"><div class="stat-label">Today</div><div class="stat-val">${txAll.filter(t=>t.date===new Date().toISOString().split('T')[0]).length}</div></div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ref</th><th>Date</th><th>Park</th><th>Plate</th><th>Visitors</th><th>Method</th><th>Total</th></tr></thead>
+      <tbody>
+        ${txAll.length===0?`<tr><td colspan="7" class="empty-state">No transactions yet. Use Gate POS to process entries.</td></tr>`:
+        txAll.slice(0,40).map(t=>`<tr>
+          <td class="td-muted" style="font-family:monospace;font-size:11px">${t.id}</td>
+          <td class="td-muted">${fmtDate(t.date)}</td>
+          <td class="td-bold">${esc(parkName(t.parkId).split(' ')[0])}</td>
+          <td>${esc(t.plate||'—')}</td>
+          <td style="text-align:center">${t.visitorCount}</td>
+          <td><span class="pm-icon ${t.payMethod==='mobile_money'?'mm':t.payMethod}">${PAY_ICONS[t.payMethod]||''} ${PAY_LABELS[t.payMethod]||t.payMethod}</span></td>
+          <td class="td-green">${fmt(t.total)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   GATE STATUS (OPERATOR)
+════════════════════════════════════════════ */
+function buildGateStatus(){
+  const gates=DB.all('gates');
+  return `
+  <div class="topbar"><div><div class="page-title">Gate Network Status</div><div class="page-sub">All 12 gates live view</div></div></div>
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="stat-box accent"><div class="stat-label">Online</div><div class="stat-val">${DB.count('gates',g=>g.status==='online')}</div></div>
+    <div class="stat-box"><div class="stat-label">Degraded</div><div class="stat-val" style="color:var(--warn)">${DB.count('gates',g=>g.status==='degraded')}</div></div>
+    <div class="stat-box"><div class="stat-label">Offline</div><div class="stat-val" style="color:var(--danger)">${DB.count('gates',g=>g.status==='offline')}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+    ${gates.map(g=>`
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${esc(parkName(g.parkId).split(' ')[0])}</div>
+      <div style="font-size:15px;font-weight:800;margin-bottom:8px">${esc(g.name)}</div>
+      <div class="g-status g-${g.status}"><span class="g-dot ${g.status}"></span>
+        ${g.status==='online'?'Online':g.status==='degraded'?'Degraded — connectivity issues':'Offline — no telemetry'}
+      </div>
+      <div style="margin-top:8px;display:flex;justify-content:space-between;font-size:11px">
+        <span style="color:var(--muted)">Uptime</span>
+        <span style="font-weight:700;color:${g.uptime>=99?'#16a34a':g.uptime>=90?'#d97706':'#ef4444'}">${g.uptime}%</span>
+      </div>
+      <div style="margin-top:4px;display:flex;justify-content:space-between;font-size:11px">
+        <span style="color:var(--muted)">Today's tx</span>
+        <span style="font-weight:700">${DB.count('transactions',t=>t.gateId===g.id&&t.date===new Date().toISOString().split('T')[0])}</span>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   VISITOR HOME
+════════════════════════════════════════════ */
+function buildVisitorHome(){
+  const u=Auth.user;
+  const bookings=DB.where('bookings',b=>b.visitorId===u.id);
+  const totalSpent=bookings.reduce((s,b)=>s+(b.total||0),0);
+  const parks=DB.all('parks');
+  return `
+  <div class="topbar">
+    <div><div class="page-title">Welcome, ${u.name.split(' ')[0]} 👋</div>
+    <div class="page-sub">Member since ${fmtDate(u.createdAt)} · ${u.nationality||'Visitor'}</div></div>
+    <button class="btn btn-primary" onclick="navigate('book_entry')">+ Book entry</button>
+  </div>
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="stat-box accent">
+      <div class="stat-label">RFID Balance</div>
+      <div class="stat-val">${fmtM(u.rfidBalance||0)}</div>
+      <div class="stat-sub">${u.rfidTag||'No tag linked'}</div>
+    </div>
+    <div class="stat-box"><div class="stat-label">Total bookings</div><div class="stat-val">${bookings.length}</div></div>
+    <div class="stat-box"><div class="stat-label">Total spent</div><div class="stat-val" style="font-size:18px">${fmtM(totalSpent)}</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Recent bookings</div>
+      ${bookings.length===0?`<div class="empty-state"><div class="empty-state-icon">🎫</div><div>No bookings yet. <a href="#" onclick="navigate('book_entry')" style="color:var(--primary)">Book your first park entry →</a></div></div>`:`
+      ${bookings.slice().reverse().slice(0,4).map(b=>`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f4f2">
+        <div><div style="font-size:13px;font-weight:700">${esc(parkName(b.parkId))}</div>
+        <div style="font-size:11px;color:var(--muted)">${fmtDate(b.date)} · ${b.visitorCount} pax · ${PAY_LABELS[b.payMethod]||b.payMethod}</div></div>
+        <div style="text-align:right"><div style="font-weight:700;color:#16a34a">${fmt(b.total)}</div>
+        <span class="badge badge-green">✓ Paid</span></div>
+      </div>`).join('')}
+      <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="navigate('my_bookings')">View all →</button>`}
+    </div>
+    <div class="card">
+      <div class="card-title">Explore parks</div>
+      ${parks.slice(0,5).map(p=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f4f2">
+        <span style="font-size:22px">${p.icon||'🌿'}</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">${esc(p.name)}</div>
+        <div style="font-size:11px;color:var(--muted)">${p.region}</div></div>
+        <div><div style="font-size:12px;font-weight:700;color:var(--primary)">${fmt(FEES[p.cat].ea_adult)}</div>
+        <div style="font-size:10px;color:var(--muted)">EA adult</div></div>
+        <button class="btn btn-outline btn-xs" onclick="navigate('book_entry')">Book</button>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   BOOK ENTRY (VISITOR)
+════════════════════════════════════════════ */
+let bookState={step:1,parkId:'',date:'',plate:'',vehClass:'saloon',regType:'local',qty:{foreigner:0,resident:0,ea_adult:1,ea_child:0},payMethod:'rfid',done:false,ref:''};
+
+function buildBookEntry(){
+  if(bookState.done) return buildBookingConfirmed();
+  const parks=DB.all('parks');
+  const u=Auth.user;
+  const vehicles=DB.where('vehicles',v=>v.userId===u.id);
+  const selectedPark=DB.find('parks',bookState.parkId);
+  const fees=selectedPark?FEES[selectedPark.cat]:{foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  const vf=bookState.parkId?VEH_FEES[bookState.vehClass][bookState.regType]:0;
+  const visTotal=CAT_KEYS.reduce((s,k)=>s+(bookState.qty[k]||0)*fees[k],0);
+  const total=vf+visTotal;
+  const pax=CAT_KEYS.reduce((s,k)=>s+(bookState.qty[k]||0),0);
+
+  return `
+  <div class="topbar"><div><div class="page-title">Book Park Entry</div><div class="page-sub">Choose your park, date and visitors</div></div></div>
+  <div class="step-bar">
+    ${[1,2,3,4].map((s,i)=>`
+      <div class="step-num ${bookState.step>s?'done':bookState.step===s?'current':'pending'}">${bookState.step>s?'✓':s}</div>
+      ${i<3?`<div class="step-line ${bookState.step>s?'done':''}"></div>`:''}`).join('')}
+  </div>
+
+  ${bookState.step===1?`
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">Select a park &amp; date</div>
+    <div class="park-pick-grid">
+      ${parks.map(p=>`
+      <div class="park-pick-card ${bookState.parkId===p.id?'sel':''}" onclick="bookState.parkId='${p.id}';renderView()">
+        <div class="park-pick-img">${p.icon||'🌿'}</div>
+        <div class="park-pick-name">${esc(p.name)}</div>
+        <div class="park-pick-meta">${p.region} · Cat ${p.cat}</div>
+        <div class="park-pick-fee">EA adult: ${fmt(FEES[p.cat].ea_adult)}</div>
+      </div>`).join('')}
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>Visit date</label>
+        <input class="form-control" type="date" id="bk-date" value="${bookState.date}" onchange="bookState.date=this.value"/>
+      </div>
+    </div>
+    <button class="btn btn-primary" ${!bookState.parkId||!bookState.date?'disabled':''} onclick="bookState.date=document.getElementById('bk-date').value;bookState.step=2;renderView()">Next: Add visitors →</button>
+  </div>`:
+
+  bookState.step===2?`
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span style="font-size:28px">${selectedPark?.icon||'🌿'}</span>
+      <div><div style="font-size:15px;font-weight:800">${selectedPark?.name}</div>
+      <div style="font-size:12px;color:var(--muted)">${fmtDate(bookState.date)}</div></div>
+    </div>
+    <div class="visitor-table" style="margin-bottom:14px">
+      <div class="vt-head"><span>Category</span><span>Rate</span><span>Qty</span><span style="text-align:right">Subtotal</span></div>
+      ${CAT_KEYS.map((k,i)=>`
+      <div class="vt-row ${bookState.qty[k]>0?'has-qty':''}">
+        <div class="vt-cat">${CAT_LABELS[i]}</div>
+        <div class="vt-rate">${fmt(fees[k])}</div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="bookAdj('${k}',-1)">−</button>
+          <span class="qty-val" id="bq-${k}">${bookState.qty[k]}</span>
+          <button class="qty-btn" onclick="bookAdj('${k}',1)">+</button>
+        </div>
+        <div class="vt-sub" id="bs-${k}">${fmt(fees[k]*(bookState.qty[k]||0))}</div>
+      </div>`).join('')}
+    </div>
+    <div class="form-row cols-3" style="margin-bottom:14px">
+      <div class="form-group"><label>Plate / vehicle</label>
+        <input class="form-control" id="bk-plate" value="${bookState.plate}" placeholder="UG 412 G" oninput="bookState.plate=this.value.toUpperCase();this.value=this.value.toUpperCase()"/>
+      </div>
+      <div class="form-group"><label>Vehicle class</label>
+        <select class="form-control" onchange="bookState.vehClass=this.value;renderView()">
+          <option value="saloon" ${bookState.vehClass==='saloon'?'selected':''}>Saloon/SUV</option>
+          <option value="minibus" ${bookState.vehClass==='minibus'?'selected':''}>Minibus</option>
+          <option value="bus" ${bookState.vehClass==='bus'?'selected':''}>Bus (25+)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Registration</label>
+        <select class="form-control" onchange="bookState.regType=this.value;renderView()">
+          <option value="local">Uganda</option><option value="ea">EA</option><option value="foreign">Foreign</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="bookState.step=1;renderView()">← Back</button>
+      <button class="btn btn-primary" ${pax===0?'disabled':''} onclick="bookState.step=3;renderView()">Next: Payment →</button>
+    </div>
+  </div>`:
+
+  bookState.step===3?`
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Payment method</div>
+      ${[['rfid','📡','RFID Tag',`Balance: ${fmt(u.rfidBalance||0)}`],['mobile_money','📱','Mobile Money','MTN / Airtel'],['card','💳','Card (Visa/MC)','Online payment']].map(([k,icon,label,sub])=>`
+      <div onclick="bookState.payMethod='${k}';renderView()" style="border:${bookState.payMethod===k?'2px solid var(--primary-light)':'1px solid var(--border)'};border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;background:${bookState.payMethod===k?'var(--accent-bg)':'#fff'};margin-bottom:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">${icon}</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700">${label}</div><div style="font-size:11px;color:var(--muted)">${sub}</div></div>
+        ${bookState.payMethod===k?'<span style="color:var(--primary);font-weight:800">✓</span>':''}
+      </div>`).join('')}
+      ${bookState.payMethod==='mobile_money'?`<div class="form-row cols-2" style="margin-top:8px">
+        <div class="form-group"><label>Network</label><select class="form-control"><option>MTN Money</option><option>Airtel Money</option></select></div>
+        <div class="form-group"><label>Phone</label><input class="form-control" id="bk-phone" placeholder="07X XXX XXXX"/></div>
+      </div>`:''}
+    </div>
+    <div class="card">
+      <div class="card-title">Order summary</div>
+      ${[
+        ['Park',selectedPark?.name],['Date',fmtDate(bookState.date)],
+        ['Vehicle',bookState.plate||'(to enter)'],['Visitors',pax+' pax'],
+        ['Vehicle fee',fmt(vf)],['Visitor fees',fmt(visTotal)],
+      ].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f4f2"><span style="font-size:12px;color:var(--muted)">${l}</span><span style="font-size:12px;font-weight:700">${esc(String(v||'—'))}</span></div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:15px;font-weight:800">
+        <span>Total</span><span style="color:var(--primary)">${fmt(total)}</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-outline" onclick="bookState.step=2;renderView()">← Back</button>
+        <button class="btn btn-primary" style="flex:1" onclick="bookState.step=4;renderView()">Pay ${fmt(total)} →</button>
+      </div>
+    </div>
+  </div>`:
+
+  `<div style="text-align:center;padding:20px 0">
+    <div style="font-size:48px;margin-bottom:12px">🔐</div>
+    <div style="font-size:16px;font-weight:800;margin-bottom:6px">Confirm payment</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${selectedPark?.name} · ${fmtDate(bookState.date)} · ${pax} visitors</div>
+    <div class="total-box" style="max-width:320px;margin:0 auto 20px">
+      <span class="total-label">Amount due</span><span class="total-amt">${fmt(total)}</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">via ${PAY_LABELS[bookState.payMethod]}</div>
+    <button class="btn btn-accent" style="padding:12px 32px;font-size:14px" onclick="confirmBooking()">✓ Confirm &amp; pay</button>
+    <br/><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="bookState.step=3;renderView()">← Back</button>
+  </div>`}`;
+}
+
+function bookAdj(k,d){
+  bookState.qty[k]=Math.max(0,(bookState.qty[k]||0)+d);
+  const park=DB.find('parks',bookState.parkId);
+  const fees=park?FEES[park.cat]:{foreigner:0,resident:0,ea_adult:0,ea_child:0};
+  const qel=document.getElementById('bq-'+k);
+  const sel=document.getElementById('bs-'+k);
+  if(qel) qel.textContent=bookState.qty[k];
+  if(sel) sel.textContent=fmt(fees[k]*bookState.qty[k]);
+}
+
+function confirmBooking(){
+  const u=Auth.user;
+  const park=DB.find('parks',bookState.parkId);
+  const fees=FEES[park.cat];
+  const vf=VEH_FEES[bookState.vehClass][bookState.regType];
+  const visTotal=CAT_KEYS.reduce((s,k)=>s+(bookState.qty[k]||0)*fees[k],0);
+  const total=vf+visTotal;
+  const pax=CAT_KEYS.reduce((s,k)=>s+(bookState.qty[k]||0),0);
+  const ref=genRef();
+  DB.insert('bookings',{
+    visitorId:u.id,parkId:bookState.parkId,plate:bookState.plate,
+    date:bookState.date,visitorCount:pax,vehicleFee:vf,visitorFee:visTotal,total,
+    payMethod:bookState.payMethod,ref,status:'completed',
+  });
+  if(bookState.payMethod==='rfid'&&u.rfidBalance>=total){
+    DB.update('users',u.id,{rfidBalance:(u.rfidBalance||0)-total});
+    Auth.user=DB.find('users',u.id);
+  }
+  bookState.done=true; bookState.ref=ref;
+  renderView();
+}
+
+function buildBookingConfirmed(){
+  const u=Auth.user;
+  const park=DB.find('parks',bookState.parkId);
+  const fees=FEES[park.cat];
+  const vf=VEH_FEES[bookState.vehClass][bookState.regType];
+  const visTotal=CAT_KEYS.reduce((s,k)=>s+(bookState.qty[k]||0)*fees[k],0);
+  const total=vf+visTotal;
+  return `
+  <div style="display:flex;flex-direction:column;align-items:center;padding:24px 0;gap:14px">
+    <div style="font-size:52px">🎉</div>
+    <div style="font-size:20px;font-weight:800">Booking confirmed!</div>
+    <div style="font-size:13px;color:var(--muted)">${park?.name} · ${fmtDate(bookState.date)}</div>
+    <div class="card" style="width:100%;max-width:340px">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:800;color:var(--primary);letter-spacing:.08em">UGANDA WILDLIFE AUTHORITY</div>
+        <div style="font-size:16px;font-weight:800;margin-top:4px">Entry Booking</div>
+        <div style="font-size:12px;color:var(--muted)">${park?.name}</div>
+      </div>
+      ${[['Date',fmtDate(bookState.date)],['Plate',bookState.plate||'—'],
+         ['Visitors',CAT_KEYS.filter(k=>bookState.qty[k]>0).map((k,_,a)=>bookState.qty[k]+' '+CAT_LABELS[CAT_KEYS.indexOf(k)]).join(', ')],
+         ['Payment',PAY_LABELS[bookState.payMethod]],['Total paid',fmt(total)],['Booking ref',bookState.ref]
+      ].map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #f0f4f2">
+        <span style="color:var(--muted)">${l}</span><span style="font-weight:700;${l==='Total paid'?'color:var(--primary)':''}">${esc(String(v))}</span>
+      </div>`).join('')}
+      <div style="text-align:center;font-family:monospace;font-size:9px;letter-spacing:3px;color:var(--muted);background:var(--bg);border-radius:4px;padding:5px 8px;margin:10px 0">| ||| | || ||| | || ||| |</div>
+      <div style="text-align:center;font-size:12px;color:#16a34a;font-weight:700">Show this at the gate or scan via RFID</div>
+    </div>
+    <button class="btn btn-primary" onclick="bookState={step:1,parkId:'',date:'',plate:'',vehClass:'saloon',regType:'local',qty:{foreigner:0,resident:0,ea_adult:1,ea_child:0},payMethod:'rfid',done:false,ref:''};renderView()">Book another entry</button>
+    <button class="btn btn-outline" onclick="navigate('my_bookings')">View all bookings →</button>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════
+   MY BOOKINGS (VISITOR)
+════════════════════════════════════════════ */
+function buildMyBookings(){
+  const u=Auth.user;
+  const bookings=DB.where('bookings',b=>b.visitorId===u.id).slice().reverse();
+  return `
+  <div class="topbar"><div><div class="page-title">My Bookings</div><div class="page-sub">${bookings.length} entries</div></div>
+  <button class="btn btn-primary" onclick="navigate('book_entry')">+ New booking</button></div>
+  ${bookings.length===0?`<div class="card"><div class="empty-state"><div class="empty-state-icon">🎫</div><div>No bookings yet. <a href="#" onclick="navigate('book_entry')" style="color:var(--primary)">Book your first park entry →</a></div></div></div>`:`
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Ref</th><th>Park</th><th>Date</th><th>Plate</th><th>Visitors</th><th>Payment</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>
+        ${bookings.map(b=>`<tr>
+          <td class="td-muted" style="font-family:monospace;font-size:11px">${b.ref||b.id}</td>
+          <td class="td-bold">${esc(parkName(b.parkId).split(' ')[0])}</td>
+          <td class="td-muted">${fmtDate(b.date)}</td>
+          <td>${esc(b.plate||'—')}</td>
+          <td style="text-align:center">${b.visitorCount}</td>
+          <td><span class="pm-icon ${b.payMethod==='mobile_money'?'mm':b.payMethod}">${PAY_ICONS[b.payMethod]||''} ${PAY_LABELS[b.payMethod]||b.payMethod}</span></td>
+          <td class="td-green">${fmt(b.total)}</td>
+          <td><span class="badge badge-green">✓ Paid</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`}`;
+}
+
+/* ════════════════════════════════════════════
+   RFID ACCOUNT (VISITOR)
+════════════════════════════════════════════ */
+function buildRFIDAccount(){
+  const u=Auth.user;
+  return `
+  <div class="topbar"><div><div class="page-title">RFID Account</div><div class="page-sub">Manage your smart gate tag and balance</div></div></div>
+  <div class="rfid-card" style="margin-bottom:16px">
+    <div class="rfid-label">RFID Tag</div>
+    <div class="rfid-tag">${u.rfidTag||'NOT LINKED'}</div>
+    <div class="rfid-balance">${fmt(u.rfidBalance||0)}</div>
+    <div style="font-size:12px;color:#9FE1CB">Available balance</div>
+    <div class="rfid-meta">
+      <div><div class="rfid-stat-label">Status</div><div class="rfid-stat-val">${u.rfidTag?'✓ Active':'—'}</div></div>
+      <div><div class="rfid-stat-label">Gates cleared</div><div class="rfid-stat-val">${DB.count('bookings',b=>b.visitorId===u.id&&b.payMethod==='rfid')}</div></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Top up balance</div>
+      <div class="form-group" style="margin-bottom:12px"><label>Amount (UGX)</label>
+        <input class="form-control" id="topup-amt" type="number" step="10000" min="10000" value="100000" placeholder="Enter amount"/>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${[50000,100000,200000,500000].map(a=>`<button class="btn btn-outline btn-sm" onclick="document.getElementById('topup-amt').value='${a}'">${fmtM(a)}</button>`).join('')}
+      </div>
+      <div class="form-group" style="margin-bottom:12px"><label>Pay via</label>
+        <select class="form-control" id="topup-net"><option>MTN Money</option><option>Airtel Money</option><option>Card (Visa/MC)</option></select>
+      </div>
+      ${!u.rfidTag?`<div class="form-group" style="margin-bottom:12px"><label>Link RFID tag (if new)</label>
+        <input class="form-control" id="topup-tag" placeholder="e.g. UG-R-0044"/>
+      </div>`:''}
+      <button class="btn btn-primary btn-block" onclick="doTopup()">Top up balance</button>
+    </div>
+    <div class="card">
+      <div class="card-title">How RFID works at park gates</div>
+      ${['Drive to the Tier 2 automated lane — no stopping required.',
+         'Overhead reader scans your windshield tag in under 8 seconds.',
+         'Fee is auto-deducted from your balance and barrier opens.',
+         'SMS receipt sent to your registered phone instantly.',
+         'Top up anytime via mobile money or card above.'].map((t,i)=>`
+      <div style="display:flex;gap:10px;padding:8px 0;border-bottom:${i<4?'1px solid #f0f4f2':'none'}">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${i+1}</div>
+        <span style="font-size:12px;color:var(--muted);line-height:1.5">${t}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function doTopup(){
+  const amt=parseInt(document.getElementById('topup-amt').value)||0;
+  if(amt<10000){toast('Minimum top-up is UGX 10,000','warn');return;}
+  const u=Auth.user;
+  const tag=document.getElementById('topup-tag')?.value.trim()||u.rfidTag||('UG-R-'+Math.random().toString(36).toUpperCase().slice(2,6));
+  DB.update('users',u.id,{rfidBalance:(u.rfidBalance||0)+amt,rfidTag:tag});
+  Auth.user=DB.find('users',u.id);
+  DB.insert('rfid_topups',{userId:u.id,amount:amt,method:document.getElementById('topup-net').value,date:new Date().toISOString().split('T')[0]});
+  toast(fmt(amt)+' added to RFID account ✓');
+  navigate('rfid_account');
+}
+
+/* ════════════════════════════════════════════
+   MY VEHICLES (VISITOR)
+════════════════════════════════════════════ */
+function buildMyVehicles(){
+  const u=Auth.user;
+  const vehicles=DB.where('vehicles',v=>v.userId===u.id);
+  return `
+  <div class="topbar"><div><div class="page-title">My Vehicles</div></div>
+  <button class="btn btn-primary" onclick="showAddVehicle()">+ Add vehicle</button></div>
+  <div id="vehicle-form"></div>
+  ${vehicles.length===0?`<div class="card"><div class="empty-state"><div class="empty-state-icon">🚗</div><div>No vehicles added.</div></div></div>`:''}
+  <div class="grid-2">
+    ${vehicles.map(v=>`
+    <div class="card" style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:36px">🚗</span>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:800;font-family:monospace">${esc(v.plate)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(v.label)} · ${v.reg==='local'?'Uganda registered':v.reg==='ea'?'East Africa':'Foreign'}</div>
+        <div style="margin-top:6px;font-size:12px;font-weight:700;color:var(--primary)">Entry fee: ${fmt(VEH_FEES.saloon[v.reg])}</div>
+      </div>
+      <button class="btn btn-danger btn-xs" onclick="deleteVehicle('${v.id}')">Remove</button>
+    </div>`).join('')}
+  </div>`;
+}
+
+function showAddVehicle(){
+  document.getElementById('vehicle-form').innerHTML=`
+  <div class="card" style="margin-bottom:16px;border:2px solid var(--primary-light)">
+    <div class="card-title">Add vehicle</div>
+    <div class="form-row cols-3">
+      <div class="form-group"><label>Plate number</label><input class="form-control" id="v-plate" placeholder="UG 000 X" oninput="this.value=this.value.toUpperCase()"/></div>
+      <div class="form-group"><label>Class</label>
+        <select class="form-control" id="v-type"><option value="saloon">Saloon/SUV</option><option value="minibus">Minibus</option><option value="bus">Bus (25+)</option></select>
+      </div>
+      <div class="form-group"><label>Registration</label>
+        <select class="form-control" id="v-reg"><option value="local">Uganda</option><option value="ea">East Africa</option><option value="foreign">Foreign</option></select>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveVehicle()">Save vehicle</button>
+      <button class="btn btn-outline" onclick="document.getElementById('vehicle-form').innerHTML=''">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function saveVehicle(){
+  const plate=document.getElementById('v-plate').value.trim().toUpperCase();
+  const type=document.getElementById('v-type').value;
+  const reg=document.getElementById('v-reg').value;
+  if(!plate){toast('Plate number required','err');return;}
+  const labels={saloon:'Saloon/SUV',minibus:'Minibus',bus:'Bus (25+)'};
+  DB.insert('vehicles',{userId:Auth.user.id,plate,type,reg,label:labels[type]});
+  toast('Vehicle '+plate+' added');navigate('my_vehicles');
+}
+
+function deleteVehicle(id){
+  if(confirm('Remove this vehicle?')){DB.delete('vehicles',id);toast('Vehicle removed');navigate('my_vehicles');}
+}
+
+/* ════════════════════════════════════════════
+   PROFILE
+════════════════════════════════════════════ */
+function buildProfile(){
+  const u=Auth.user;
+  return `
+  <div class="topbar"><div><div class="page-title">Profile</div></div></div>
+  <div class="grid-2">
+    <div class="flex-col">
+      <div class="card" style="display:flex;align-items:center;gap:16px">
+        <div class="user-avatar" style="width:56px;height:56px;font-size:20px">${u.name.split(' ').slice(0,2).map(n=>n[0]).join('')}</div>
+        <div>
+          <div style="font-size:18px;font-weight:800">${esc(u.name)}</div>
+          <div style="font-size:12px;color:var(--muted)">${esc(u.email)}</div>
+          <div style="margin-top:6px"><span class="badge badge-green">✓ Verified · ${u.role}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Edit profile</div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Full name</label><input class="form-control" id="pr-name" value="${esc(u.name)}"/></div>
+          <div class="form-group"><label>Phone</label><input class="form-control" id="pr-phone" value="${esc(u.phone||'')}"/></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Email</label><input class="form-control" id="pr-email" value="${esc(u.email)}"/></div>
+          <div class="form-group"><label>Nationality</label>
+            <select class="form-control" id="pr-nat">
+              ${['Ugandan','Kenyan','Tanzanian','Rwandan','Other (EA)','Foreign'].map(n=>`<option ${n===u.nationality?'selected':''}>${n}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>New password</label><input class="form-control" id="pr-pass" type="password" placeholder="Leave blank to keep current"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveProfile()">Save changes</button>
+      </div>
+    </div>
+    <div class="flex-col">
+      <div class="card">
+        <div class="card-title">Account details</div>
+        ${[['Role',u.role],['Nationality',u.nationality||'—'],['RFID Tag',u.rfidTag||'—'],
+           ['RFID Balance',fmt(u.rfidBalance||0)],['Member since',fmtDate(u.createdAt)],
+        ].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f4f2">
+          <span style="font-size:13px;color:var(--muted)">${l}</span>
+          <span style="font-size:13px;font-weight:700">${esc(String(v))}</span>
+        </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Notifications</div>
+        ${['SMS receipt after each gate entry','Balance low alert (below UGX 50,000)','Booking reminder (24h before visit)'].map((t,i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:${i<2?'1px solid #f0f4f2':'none'}">
+          <span style="font-size:12px;color:var(--text)">${t}</span>
+          <div style="width:36px;height:20px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:flex-end;padding:0 3px;cursor:pointer">
+            <div style="width:14px;height:14px;border-radius:50%;background:#fff"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-outline btn-block" style="color:var(--danger);border-color:var(--danger)" onclick="logout()">Sign out ↪</button>
+    </div>
+  </div>`;
+}
+
+function saveProfile(){
+  const name=document.getElementById('pr-name').value.trim();
+  const phone=document.getElementById('pr-phone').value.trim();
+  const email=document.getElementById('pr-email').value.trim();
+  const nat=document.getElementById('pr-nat').value;
+  const pass=document.getElementById('pr-pass').value;
+  if(!name||!email){toast('Name and email required','err');return;}
+  const updates={name,phone,email,nationality:nat};
+  if(pass) updates.password=pass;
+  DB.update('users',Auth.user.id,updates);
+  Auth.user=DB.find('users',Auth.user.id);
+  toast('Profile saved successfully');
+  navigate('profile');
+}
+
+/* ════════════════════════════════════════════
+   BIND VIEW EVENTS
+════════════════════════════════════════════ */
+function bindView(){/* bindings are inline onclick */ }
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+seedDB();
+render();
+</script>
+</body>
+</html>
